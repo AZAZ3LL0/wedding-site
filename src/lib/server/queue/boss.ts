@@ -67,3 +67,13 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 		stop: () => boss.stop({ graceful: true, timeout: 5_000 })
 	};
 }
+
+const globalKey = Symbol.for('wedding.queue');
+type WithQueue = typeof globalThis & { [globalKey]?: Promise<Queue> };
+
+// Cached on globalThis: Vite reloads modules in dev, and a second worker would double every job.
+export function getQueue(deps: () => QueueDeps): Promise<Queue> {
+	const scope = globalThis as WithQueue;
+	scope[globalKey] ??= startQueue(deps());
+	return scope[globalKey];
+}
