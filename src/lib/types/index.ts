@@ -53,6 +53,9 @@ export const rsvpPayloadSchema = z.object({
 });
 export type RsvpPayload = z.infer<typeof rsvpPayloadSchema>;
 
+// Word forms for 1, 2 and 5: «1 день», «2 дня», «5 дней».
+export type PluralForms = [one: string, few: string, many: string];
+
 export type MatchResult =
 	| { kind: 'single'; guestId: string }
 	| { kind: 'ambiguous'; candidates: { guestId: string; hint: string }[] }
