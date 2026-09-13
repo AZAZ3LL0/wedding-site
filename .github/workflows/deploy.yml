@@ -38,7 +38,7 @@ jobs:
       - name: upload release
         run: >
           rsync -az --delete -e "ssh -i $HOME/.ssh/deploy"
-          build package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc deploy/release.sh
+          build drizzle drizzle.config.ts package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc deploy/release.sh
           "$DEPLOY_USER@$DEPLOY_HOST:/srv/wedding/releases/$GITHUB_SHA/"
       - name: activate release
         run: ssh -i ~/.ssh/deploy "$DEPLOY_USER@$DEPLOY_HOST" "bash /srv/wedding/releases/$GITHUB_SHA/release.sh $GITHUB_SHA"
