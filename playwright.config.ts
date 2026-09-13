@@ -9,7 +9,8 @@ export default defineConfig({
 	use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },
 	projects: [{ name: 'mobile', use: { ...devices['Pixel 7'] } }],
 	webServer: {
-		command: 'pnpm build && pnpm preview --port 4173 --strictPort',
+		// CI builds in an earlier step, so only local runs pay for a rebuild.
+		command: `${process.env.CI ? '' : 'pnpm build && '}pnpm preview --port 4173 --strictPort`,
 		port: 4173,
 		reuseExistingServer: !process.env.CI
 	}
