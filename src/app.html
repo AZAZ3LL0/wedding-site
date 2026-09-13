@@ -4,6 +4,16 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+		<script>
+			// Lets CSS hide not-yet-revealed blocks only when JS runs; without JS content stays visible.
+			// If the app bundle never starts use:reveal, drop the class so nothing stays hidden.
+			document.documentElement.classList.add('js');
+			setTimeout(function () {
+				if (!document.documentElement.hasAttribute('data-reveal-ready')) {
+					document.documentElement.classList.remove('js');
+				}
+			}, 4000);
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

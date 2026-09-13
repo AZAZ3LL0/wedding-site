@@ -101,3 +101,9 @@
 		-webkit-font-smoothing: antialiased;
 	}
 }
+
+@media (prefers-reduced-motion: no-preference) {
+	html.js [data-reveal]:not([data-revealed]) {
+		opacity: 0;
+	}
+}
