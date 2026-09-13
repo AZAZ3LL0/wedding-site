@@ -25,6 +25,15 @@ A merge into `main` runs `.github/workflows/deploy.yml`: build on the runner, rs
 
 ## One-time bootstrap (as root)
 
+`bootstrap.sh` automates the steps below and is safe to rerun. It stops the old `wedding-invite` stack without removing its volumes.
+
+```bash
+scp -r deploy root@<host>:/tmp/wedding-deploy
+ssh root@<host> 'bash /tmp/wedding-deploy/bootstrap.sh "<deploy public key>"'
+```
+
+Steps:
+
 1. Node 24 from the official tarball into `/usr/local`, verified against `SHASUMS256.txt`, then `npm i -g pnpm@10`. Install `rsync`.
 2. User `deploy` with the Actions public key in `~/.ssh/authorized_keys` and `/etc/sudoers.d/wedding`:
    ```
