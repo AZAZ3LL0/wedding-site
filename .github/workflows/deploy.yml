@@ -1,0 +1,44 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The VPS shares one vCPU with a live VPN, so the build happens here.
+      - run: pnpm build
+      - name: configure ssh
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: upload release
+        run: >
+          rsync -az --delete -e "ssh -i $HOME/.ssh/deploy"
+          build package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc deploy/release.sh
+          "$DEPLOY_USER@$DEPLOY_HOST:/srv/wedding/releases/$GITHUB_SHA/"
+      - name: activate release
+        run: ssh -i ~/.ssh/deploy "$DEPLOY_USER@$DEPLOY_HOST" "bash /srv/wedding/releases/$GITHUB_SHA/release.sh $GITHUB_SHA"
