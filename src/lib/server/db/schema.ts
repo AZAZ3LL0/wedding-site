@@ -114,3 +114,9 @@ export const guestSessions = pgTable('guest_sessions', {
 	expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
+
+// Receipt of a job effect. The `<topic>:<singletonKey>` key keeps handlers without a fact table idempotent.
+export const jobReceipts = pgTable('job_receipts', {
+	key: text('key').primaryKey(),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
