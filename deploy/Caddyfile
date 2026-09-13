@@ -1,0 +1,20 @@
+{
+	# Ports 80 and 443 belong to the VPN on this host. Cloudflare reaches the origin on 2096.
+	auto_https disable_redirects
+}
+
+wedding.alina-samat.ru:2096 {
+	# Cloudflare terminates public TLS in Full mode, so a self-signed origin certificate is enough.
+	tls internal
+
+	encode zstd gzip
+
+	header {
+		X-Robots-Tag "noindex, nofollow"
+		Referrer-Policy "same-origin"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	reverse_proxy 127.0.0.1:3000
+}
