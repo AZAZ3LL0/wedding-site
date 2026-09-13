@@ -1,1 +1,103 @@
 @import 'tailwindcss';
+
+/* Unicode ranges match the Google Fonts subsets so the browser fetches Cyrillic only when needed. */
+@font-face {
+	font-family: 'Cormorant Garamond';
+	font-style: normal;
+	font-weight: 300 700;
+	font-display: swap;
+	src: url('/fonts/cormorant-garamond-cyrillic-wght.woff2') format('woff2');
+	unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+	font-family: 'Cormorant Garamond';
+	font-style: normal;
+	font-weight: 300 700;
+	font-display: swap;
+	src: url('/fonts/cormorant-garamond-latin-wght.woff2') format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: 'Great Vibes';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('/fonts/great-vibes-cyrillic-400.woff2') format('woff2');
+	unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+	font-family: 'Great Vibes';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('/fonts/great-vibes-latin-400.woff2') format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: 'Manrope';
+	font-style: normal;
+	font-weight: 200 800;
+	font-display: swap;
+	src: url('/fonts/manrope-cyrillic-wght.woff2') format('woff2');
+	unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+	font-family: 'Manrope';
+	font-style: normal;
+	font-weight: 200 800;
+	font-display: swap;
+	src: url('/fonts/manrope-latin-wght.woff2') format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+	--c-ink: #1b1b1b;
+	--c-paper: #f7f7f5;
+	--c-forest: #12352c;
+	--c-muted: #8a8a85;
+
+	--space-section: clamp(4rem, 12vw, 8rem);
+	--radius: 0.375rem;
+	--dur-fast: 180ms;
+	--dur-slow: 700ms;
+}
+
+/*
+ * These token names share Tailwind's namespaces, so declaring them in a static theme
+ * emits the exact variable names from the spec and overrides Tailwind's defaults.
+ */
+@theme static {
+	--font-display: 'Cormorant Garamond', 'Times New Roman', serif;
+	--font-script: 'Great Vibes', 'Cormorant Garamond', cursive;
+	--font-body: 'Manrope', system-ui, sans-serif;
+	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@theme inline {
+	--color-ink: var(--c-ink);
+	--color-paper: var(--c-paper);
+	--color-forest: var(--c-forest);
+	--color-muted: var(--c-muted);
+	--spacing-section: var(--space-section);
+	--radius-token: var(--radius);
+}
+
+@layer base {
+	html {
+		background-color: var(--c-paper);
+		color: var(--c-ink);
+		font-family: var(--font-body);
+		-webkit-font-smoothing: antialiased;
+	}
+}
