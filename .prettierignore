@@ -13,3 +13,7 @@ bun.lockb
 
 # Spec is edited by hand, append-only
 tech.md
+
+# Tooling output
+/test-results/
+/playwright-report/
