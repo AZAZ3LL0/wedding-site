@@ -74,7 +74,7 @@ let cached: Config | undefined;
 
 export function getConfig(): Config {
 	if (!cached) {
-		if (process.env.NODE_ENV !== 'production' && existsSync('.env')) {
+		if (existsSync('.env')) {
 			// Existing variables win, so CI and systemd values are never overridden by a stray file.
 			process.loadEnvFile('.env');
 		}
