@@ -1,12 +1,13 @@
 # tech.md
 
-**Версия ядра: v3**
+**Версия ядра: v4**
 
 Changelog:
 
 - v1: первичная фиксация. Стек, схема БД, контракты очереди, общие типы, контент-конфиг, UI-примитивы, роадмап слайсов.
 - v2: деплой под VPS, общий с живым VPN. Сборка в CI вместо сборки на сервере, Caddy на порту 2096 за Cloudflare, PostgreSQL в Docker на loopback, отдельный пользователь `deploy`. Разделы 1, 2, 10.
 - v3: интерфейс `TelegramClient` и `TelegramError`, временный топик `demo.ping`, таблица `job_receipts` для идемпотентности хендлеров без своей таблицы-факта, исправлен ретрай `reminder.send`. Разделы 3, 4, 5, 6, 10.
+- v4: UI-подписи примитивов приходят пропсами из блока `content.ui`, тип `PluralForms`, уточнены пропсы `Reveal`, `Countdown`, `Collage`, `MapCard`, `AudioToggle`, `Field` и проброс HTML-атрибутов у контролов. Разделы 6, 7, 8.
 
 Правила изменения файла: только append-only, любое изменение контракта (схема БД, типы в `lib/types`, payload джоба, схема контента) бампает версию и добавляет строку в changelog. Сессия не правит этот файл самостоятельно: при нехватке контракта выдаёт блок `CONTRACT GAP` и ждёт решения.
 
@@ -375,6 +376,9 @@ export const rsvpPayloadSchema = z.object({
 });
 export type RsvpPayload = z.infer<typeof rsvpPayloadSchema>;
 
+// Формы слова для 1, 2 и 5: «1 день», «2 дня», «5 дней».
+export type PluralForms = [one: string, few: string, many: string];
+
 export type MatchResult =
   | { kind: 'single'; guestId: string }
   | { kind: 'ambiguous'; candidates: { guestId: string; hint: string }[] }
@@ -454,6 +458,17 @@ export const content = {
   },
   music: { enabled: true, src: '/audio/TODO.mp3' },
   gallery: [],
+  // Подписи UI-примитивов. Слайс передаёт их примитиву пропсами, см. раздел 8.
+  ui: {
+    countdown: {
+      days: ['день', 'дня', 'дней'],
+      hours: ['час', 'часа', 'часов'],
+      minutes: ['минута', 'минуты', 'минут'],
+      seconds: ['секунда', 'секунды', 'секунд']
+    },
+    audio: { play: 'Включить музыку', pause: 'Выключить музыку' },
+    map: { open: 'Открыть на карте' }
+  },
   // Сегментированные тексты. Ключи совпадают с Audience.
   byAudience: {
     family:     { greeting: 'TODO', address: 'ты', showRegistry: true },
@@ -495,20 +510,22 @@ export const content = {
 | Компонент | Пропсы |
 | --- | --- |
 | `Section` | `variant: 'light' \| 'dark'`, `padded?: boolean` |
-| `Reveal` | `delay?: number`, `y?: number`, обёртка над `use:reveal` |
+| `Reveal` | `delay?: number` (мс), `y?: number` (px), обёртка над `use:reveal` |
 | `Heading` | `level: 1..3`, `script?: boolean` (каллиграфия) |
 | `Divider` | `orientation: 'vertical' \| 'horizontal'` |
-| `Countdown` | `target: string` (ISO) |
-| `Collage` | `images: { src, alt, span }[]` |
+| `Countdown` | `target: string` (ISO), `labels: { days, hours, minutes, seconds: PluralForms }` |
+| `Collage` | `images: { src: string; alt: string; span: 1 \| 2 }[]` |
 | `TimelineItem` | `time: string`, `title: string`, `caption: string`, `icon: 'pin' \| 'rings' \| 'dish'` |
-| `MapCard` | `title`, `address`, `mapUrl`, `photos` |
-| `AudioToggle` | `src: string` |
+| `MapCard` | `title`, `address`, `mapUrl`, `photos: { src: string; alt: string }[]`, `linkLabel: string` |
+| `AudioToggle` | `src: string`, `labels: { play: string; pause: string }` |
 | `Button` | `variant: 'solid' \| 'ghost'`, `loading?: boolean`, `type` |
-| `Field` | `label`, `error?`, `required?`, слот под контрол |
+| `Field` | `label`, `error?`, `required?`, `children: Snippet<[id: string]>` (контрол получает id для связи с label) |
 | `TextInput`, `TextArea` | `value`, `placeholder`, `maxlength` |
 | `RadioGroup` | `options: { id, label }[]`, `value` |
 | `CheckboxGroup` | `options: { id, label }[]`, `values`, `max?: number` |
 | `Toast` | `kind: 'ok' \| 'error'`, `text` |
+
+Примитивы не содержат строк с текстом. Подписи (`labels`, `linkLabel`, тексты кнопок и полей) передаёт вызывающий слайс из `content.ui` и остального контент-конфига. `Button`, `TextInput`, `TextArea`, `RadioGroup`, `CheckboxGroup` пробрасывают стандартные HTML-атрибуты (`name`, `id`, `required`, `disabled`, `aria-*`), чтобы работать в form actions SvelteKit без JS.
 
 Админка берёт `Table`, `Badge`, `Dialog`, `Select`, `Tabs` из shadcn-svelte. Не смешивать: shadcn-компоненты на публичном сайте не использовать, стиль другой.
 
