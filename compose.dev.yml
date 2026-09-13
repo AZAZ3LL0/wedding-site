@@ -1,0 +1,17 @@
+# Local Postgres for dev and tests. Credentials are local-only and never used in production.
+name: wedding-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: wedding
+      POSTGRES_PASSWORD: wedding
+      POSTGRES_DB: wedding
+    ports:
+      - '127.0.0.1:55432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
