@@ -1,11 +1,12 @@
 # tech.md
 
-**Версия ядра: v2**
+**Версия ядра: v3**
 
 Changelog:
 
 - v1: первичная фиксация. Стек, схема БД, контракты очереди, общие типы, контент-конфиг, UI-примитивы, роадмап слайсов.
 - v2: деплой под VPS, общий с живым VPN. Сборка в CI вместо сборки на сервере, Caddy на порту 2096 за Cloudflare, PostgreSQL в Docker на loopback, отдельный пользователь `deploy`. Разделы 1, 2, 10.
+- v3: интерфейс `TelegramClient` и `TelegramError`, временный топик `demo.ping`, таблица `job_receipts` для идемпотентности хендлеров без своей таблицы-факта, исправлен ретрай `reminder.send`. Разделы 3, 4, 5, 6, 10.
 
 Правила изменения файла: только append-only, любое изменение контракта (схема БД, типы в `lib/types`, payload джоба, схема контента) бампает версию и добавляет строку в changelog. Сессия не правит этот файл самостоятельно: при нехватке контракта выдаёт блок `CONTRACT GAP` и ждёт решения.
 
@@ -97,6 +98,7 @@ src/
       queue/
         boss.ts              # инициализация pg-boss
         jobs/
+          demo-ping.ts         # временный топик скелета, раздел 5
           reminder-schedule.ts
           reminder-send.ts
           rsvp-notify-admin.ts
@@ -219,6 +221,12 @@ export const guestSessions = pgTable('guest_sessions', {
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
+
+// Квитанция выполненного эффекта джоба. Ключ `<topic>:<singletonKey>`, см. раздел 5.
+export const jobReceipts = pgTable('job_receipts', {
+  key: text('key').primaryKey(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
 ```
 
 Инварианты, которые держит код (покрыть тестами):
@@ -256,9 +264,9 @@ type ReminderSendJob = { guestId: string; stage: 'd30' | 'd7' };
 Правила:
 
 - `singletonKey = `${guestId}:${stage}``, `retryLimit: 3`, `retryBackoff: true`.
-- Хендлер первым делом вставляет строку в `reminders` с `ON CONFLICT (guest_id, stage) DO NOTHING`. Ноль затронутых строк означает, что напоминание уже отправлено: хендлер выходит успешно, не отправляя сообщение.
+- Хендлер первым делом забирает строку в `reminders` со статусом `sent`: `INSERT ... ON CONFLICT (guest_id, stage) DO UPDATE SET status = 'sent', error = null WHERE reminders.status = 'failed' RETURNING id`. Ноль строк означает, что напоминание уже отправлено или отправляется: хендлер выходит успешно, не отправляя сообщение. Строка со статусом `failed` забирается повторно, поэтому ретрай доходит до отправки.
 - Текст зависит от состояния RSVP на момент отправки: нет ответа, ответ `yes`, ответ `no`. Шаблоны в `telegram/templates.ts`.
-- Ошибка Telegram API пишется в `reminders.error`, статус `failed`, джоб уходит в ретрай.
+- Ошибка Telegram API пишется в `reminders.error`, статус `failed`. `TelegramError` вида `server` и `timeout` отправляет джоб в ретрай, вид `rejected` завершает джоб без ретрая.
 
 Тест идемпотентности обязателен: прогнать хендлер дважды с одним payload, проверить ровно одну отправку в фейковом клиенте.
 
@@ -268,7 +276,47 @@ type ReminderSendJob = { guestId: string; stage: 'd30' | 'd7' };
 type RsvpNotifyAdminJob = { guestId: string; kind: 'created' | 'updated' };
 ```
 
-Отправляет организатору сообщение в Telegram о новом или изменённом ответе. `singletonKey = `${guestId}:${kind}:${updatedAtIso}``, `retryLimit: 3`.
+Отправляет организатору сообщение в Telegram о новом или изменённом ответе. `singletonKey = `${guestId}:${kind}:${updatedAtIso}``, `retryLimit: 3`. Идемпотентность через квитанцию `job_receipts`.
+
+### Квитанции `job_receipts`
+
+`singletonKey` в pg-boss отсекает дубль, только пока первая задача в очереди или выполняется. Хендлер без собственной таблицы-факта держит идемпотентность сам: в одной транзакции вставляет квитанцию с ключом `<topic>:<singletonKey>` через `ON CONFLICT (key) DO NOTHING` и выполняет эффект. Ноль вставленных строк: хендлер выходит успешно без эффекта. Ошибка эффекта откатывает транзакцию вместе с квитанцией, ретрай выполняет эффект заново.
+
+### `demo.ping`
+
+Временный топик скелета (задача 0.4). Удаляется в 5.3 вместе с хендлером и тестами.
+
+```ts
+type DemoPingJob = { pingId: string };  // uuid
+```
+
+- `singletonKey = pingId`, `retryLimit: 3`, `retryBackoff: true`.
+- Отправляет в `TELEGRAM_ADMIN_CHAT_ID` текст из `telegram/templates.ts`.
+- Идемпотентность через квитанцию `demo.ping:<pingId>`.
+
+### `TelegramClient`
+
+`lib/server/telegram/client.ts`. Все отправки в Telegram идут только через этот интерфейс.
+
+```ts
+export type SendMessageInput = { chatId: number; text: string };
+export type SentMessage = { messageId: number };
+
+export interface TelegramClient {
+  sendMessage(input: SendMessageInput): Promise<SentMessage>;
+}
+
+// server: 5xx и сетевые ошибки, timeout: нет ответа, rejected: 4xx (бот заблокирован, чат не найден)
+export type TelegramErrorKind = 'server' | 'timeout' | 'rejected';
+
+export class TelegramError extends Error {
+  constructor(readonly kind: TelegramErrorKind, message: string) {
+    super(message);
+  }
+}
+```
+
+`FakeTelegramClient` (`fake.ts`) валидирует вход zod (`chatId` целое, `text` от 1 до 4096 символов) и падает на мусоре, хранит отправленные сообщения в памяти, `failNext(kind)` заставляет следующий вызов бросить `TelegramError` этого вида.
 
 ---
 
@@ -331,6 +379,10 @@ export type MatchResult =
   | { kind: 'single'; guestId: string }
   | { kind: 'ambiguous'; candidates: { guestId: string; hint: string }[] }
   | { kind: 'none' };
+
+// Payload джобов, см. раздел 5. Хендлер валидирует вход этими схемами.
+export const demoPingJobSchema = z.object({ pingId: z.uuid() });
+export type DemoPingJob = z.infer<typeof demoPingJobSchema>;
 ```
 
 Серверные правила поверх схемы (валидировать в `rsvp/service.ts`, не в zod):
@@ -509,6 +561,8 @@ ADMIN_PASSWORD=
 SESSION_SECRET=
 USE_FAKE_TELEGRAM=true
 ```
+
+При `USE_FAKE_TELEGRAM=true` переменные `TELEGRAM_*` необязательны. Вне `NODE_ENV=production` `SESSION_SECRET` генерируется случайно при старте, `ADMIN_PASSWORD` необязателен. В production оба обязательны.
 
 - **Фейки.** Все внешние клиенты за интерфейсами. `USE_FAKE_TELEGRAM=true` подставляет `FakeTelegramClient`, который пишет отправленные сообщения в память и отдаёт их на `/kitchen-sink/telegram`. Разработка идёт без реального токена с первого дня.
 - **CI-гейт на PR:** `svelte-check`, `eslint`, `prettier --check`, `vitest run`, `playwright test`, `vite build`, миграции на эфемерном Postgres. Деплоя нет.
