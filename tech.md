@@ -1,10 +1,11 @@
 # tech.md
 
-**Версия ядра: v1**
+**Версия ядра: v2**
 
 Changelog:
 
 - v1: первичная фиксация. Стек, схема БД, контракты очереди, общие типы, контент-конфиг, UI-примитивы, роадмап слайсов.
+- v2: деплой под VPS, общий с живым VPN. Сборка в CI вместо сборки на сервере, Caddy на порту 2096 за Cloudflare, PostgreSQL в Docker на loopback, отдельный пользователь `deploy`. Разделы 1, 2, 10.
 
 Правила изменения файла: только append-only, любое изменение контракта (схема БД, типы в `lib/types`, payload джоба, схема контента) бампает версию и добавляет строку в changelog. Сессия не правит этот файл самостоятельно: при нехватке контракта выдаёт блок `CONTRACT GAP` и ждёт решения.
 
@@ -33,7 +34,7 @@ Changelog:
 | Привязка Telegram | Гость оставляет `@username` в форме. Организатор рассылает персональную ссылку `t.me/<bot>?start=<token>` вручную. Дальше бот работает автоматически |
 | Админка | Веб-админка со счётчиками и экспортом |
 | Напоминания | За 30 и за 7 дней до даты свадьбы |
-| Хостинг | Свой VPS, Caddy, systemd, автодеплой из `main` |
+| Хостинг | Свой VPS (общий с VPN), Cloudflare, Caddy, systemd, автодеплой из `main` со сборкой в CI |
 
 ### Ограничение Telegram
 
@@ -54,7 +55,7 @@ Bot API не позволяет боту написать первым поль�
 - exceljs для выгрузки xlsx
 - Шрифты self-hosted в `static/fonts`, без Google Fonts в рантайме
 - Тесты: vitest (unit, контрактные, идемпотентность), Playwright (e2e), fast-check (property-based)
-- Инфраструктура: Caddy (TLS, reverse proxy), systemd, GitHub Actions
+- Инфраструктура: Cloudflare (публичный TLS), Caddy (reverse proxy), systemd, Docker только для PostgreSQL, GitHub Actions
 
 Запрещено добавлять зависимости вне этого списка без бампа версии ядра.
 
@@ -511,7 +512,9 @@ USE_FAKE_TELEGRAM=true
 
 - **Фейки.** Все внешние клиенты за интерфейсами. `USE_FAKE_TELEGRAM=true` подставляет `FakeTelegramClient`, который пишет отправленные сообщения в память и отдаёт их на `/kitchen-sink/telegram`. Разработка идёт без реального токена с первого дня.
 - **CI-гейт на PR:** `svelte-check`, `eslint`, `prettier --check`, `vitest run`, `playwright test`, `vite build`, миграции на эфемерном Postgres. Деплоя нет.
-- **Деплой на мёрдж в main:** SSH на VPS, pull, `pnpm i --frozen-lockfile`, `pnpm build`, `drizzle-kit migrate`, `systemctl restart wedding`. Caddy терминирует TLS и проксирует на порт приложения.
+- **Деплой на мёрдж в main:** GitHub Actions выполняет `pnpm build` на раннере и rsync'ом по SSH от пользователя `deploy` отправляет `build/`, `package.json`, `pnpm-lock.yaml`, `drizzle/`, `drizzle.config.ts` в `/srv/wedding/releases/<sha>`. На VPS: `pnpm i --frozen-lockfile`, `drizzle-kit migrate`, переключение симлинка `/srv/wedding/current`, `sudo systemctl restart wedding`, проверка ответа приложения с откатом на предыдущий релиз. Сборки на VPS нет.
+- **Сервер общий с VPN.** Порты 80 и 443 заняты VPN и не трогаются. Публичный трафик: Cloudflare (SSL Full) → Origin Rule на порт 2096 → Caddy на хосте с `tls internal` → приложение на `127.0.0.1:3000`. Порт 2096 открыт только диапазонам Cloudflare. PostgreSQL 16 в Docker, опубликован только на `127.0.0.1:5432`. Unit `wedding` ограничен по памяти. Файлы: `deploy/`.
+- **Секреты деплоя** в GitHub environment `production`: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`. Прикладные секреты живут только в `/srv/wedding/shared/.env` на сервере.
 - **Branch protection** на `main`: только через PR, мёрдж при зелёном CI.
 
 ---
