@@ -1,5 +1,6 @@
 // Dev and test data covering every case from tech.md §10. Run with `pnpm db:seed`.
 // Explicit .ts extensions let Node run this file without a build step.
+import { getConfig } from '../src/lib/server/config.ts';
 import { createDb, type Db } from '../src/lib/server/db/index.ts';
 import { guests, parties } from '../src/lib/server/db/schema.ts';
 import { nameKey } from '../src/lib/server/guests/name-key.ts';
@@ -141,12 +142,7 @@ export async function seed(db: Db): Promise<void> {
 }
 
 if (import.meta.main) {
-	const url = process.env.DATABASE_URL;
-	if (!url) {
-		console.error('DATABASE_URL is not set');
-		process.exit(1);
-	}
-	const { db, close } = createDb(url);
+	const { db, close } = createDb(getConfig().databaseUrl);
 	try {
 		await seed(db);
 		console.log(`seeded ${seedParties.length} parties and ${seedGuests.length} guests`);
