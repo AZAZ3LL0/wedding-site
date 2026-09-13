@@ -10,6 +10,12 @@ previous="$(readlink -f "$root/current" 2>/dev/null || true)"
 cd "$release"
 pnpm install --frozen-lockfile
 
+# Migrate before switching: a failed migration leaves the running release untouched.
+set -a
+. "$root/shared/.env"
+set +a
+pnpm db:migrate
+
 activate() {
 	ln -sfn "$1" "$root/current.next"
 	mv -Tf "$root/current.next" "$root/current"
