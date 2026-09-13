@@ -1,5 +1,7 @@
 import { PgBoss, type Job } from 'pg-boss';
-import type { Db } from '$lib/server/db';
+import { getConfig } from '$lib/server/config';
+import { getDb, type Db } from '$lib/server/db';
+import { getTelegramClient } from '$lib/server/telegram';
 import { TelegramError, type TelegramClient } from '$lib/server/telegram/client';
 import { InvalidPayloadError } from './errors';
 import { DEMO_PING, handleDemoPing } from './jobs/demo-ping';
@@ -76,4 +78,17 @@ export function getQueue(deps: () => QueueDeps): Promise<Queue> {
 	const scope = globalThis as WithQueue;
 	scope[globalKey] ??= startQueue(deps());
 	return scope[globalKey];
+}
+
+// The worker every request in this process talks to, wired from app config.
+export function getAppQueue(): Promise<Queue> {
+	return getQueue(() => {
+		const config = getConfig();
+		return {
+			connectionString: config.databaseUrl,
+			db: getDb(),
+			telegram: getTelegramClient(),
+			adminChatId: config.telegram.adminChatId
+		};
+	});
 }
