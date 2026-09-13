@@ -21,10 +21,21 @@ export default defineConfig({
 			{
 				extends: './vite.config.ts',
 				test: {
-					name: 'server',
+					name: 'unit',
 					environment: 'node',
-					include: ['src/**/*.{test,spec}.ts', 'scripts/**/*.{test,spec}.ts'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+					include: ['src/**/*.test.ts', 'scripts/**/*.test.ts'],
+					exclude: ['**/*.db.test.ts']
+				}
+			},
+			{
+				extends: './vite.config.ts',
+				test: {
+					name: 'db',
+					environment: 'node',
+					include: ['src/**/*.db.test.ts', 'scripts/**/*.db.test.ts'],
+					globalSetup: ['tests/setup/database.ts'],
+					// Database suites share one migrated database per run.
+					fileParallelism: false
 				}
 			}
 		]
