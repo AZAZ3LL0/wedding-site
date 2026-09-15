@@ -1,6 +1,6 @@
 # tech.md
 
-**Версия ядра: v4**
+**Версия ядра: v5**
 
 Changelog:
 
@@ -8,6 +8,7 @@ Changelog:
 - v2: деплой под VPS, общий с живым VPN. Сборка в CI вместо сборки на сервере, Caddy на порту 2096 за Cloudflare, PostgreSQL в Docker на loopback, отдельный пользователь `deploy`. Разделы 1, 2, 10.
 - v3: интерфейс `TelegramClient` и `TelegramError`, временный топик `demo.ping`, таблица `job_receipts` для идемпотентности хендлеров без своей таблицы-факта, исправлен ретрай `reminder.send`. Разделы 3, 4, 5, 6, 10.
 - v4: UI-подписи примитивов приходят пропсами из блока `content.ui`, тип `PluralForms`, уточнены пропсы `Reveal`, `Countdown`, `Collage`, `MapCard`, `AudioToggle`, `Field` и проброс HTML-атрибутов у контролов. Разделы 6, 7, 8.
+- v5: дизайн публичного сайта «конверт с открыткой» для Кыз Узату в Астрахани. Полная схема контента с форматами и дефолтами, `event.utcOffset`, блоки `envelope`, `cover`, `invitation`, `sections`, `registry: null`, парсинг контента на сервере и передача через `load`. Палитра токенов олива, бордо, крем, `--font-body` на Cormorant Garamond. Правила конверта. Роадмап стадии 1 без мудборда, галереи, тайминга, подарков и контактов на сайте. ЗАГС в БД и RSVP не меняются. Разделы 3, 7, 8, 13.
 
 Правила изменения файла: только append-only, любое изменение контракта (схема БД, типы в `lib/types`, payload джоба, схема контента) бампает версию и добавляет строку в changelog. Сессия не правит этот файл самостоятельно: при нехватке контракта выдаёт блок `CONTRACT GAP` и ждёт решения.
 
@@ -75,6 +76,7 @@ src/
       index.ts               # общие типы, шарятся между слайсами
     server/
       config.ts              # чтение и валидация env, единственный доступ к process.env
+      content.ts             # getContent(): контент, распарсенный один раз при старте
       db/
         schema.ts            # Drizzle schema, источник истины по БД
         index.ts             # клиент
@@ -110,7 +112,8 @@ src/
     (site)/
       +layout.svelte         # музыка, фон, шрифты
       +page.svelte           # ввод имени
-      i/                     # приглашение, сегментированное
+      +layout.server.ts      # отдаёт ContentData в load
+      i/                     # приглашение: конверт, открытка, секции, локальные компоненты
       rsvp/                  # эталонный слайс
       thanks/
     (admin)/
@@ -420,44 +423,76 @@ Property-инварианты для fast-check:
 
 Весь текст и все данные события лежат в `src/lib/content/wedding.ts` и валидируются `content/schema.ts` при старте приложения. В компонентах нет захардкоженных строк.
 
+Событие: Кыз Узату Алины, проводы невесты от семьи Тулешовых. ЗАГСа в этот день нет, поэтому `registry: null`. Поля ЗАГСа в БД (раздел 4), `rsvpPayloadSchema` и `byAudience.showRegistry` не меняются: при `registry: null` блок ЗАГСа не выводится ни одной аудитории.
+
 ```ts
 export const content = {
-  couple: { bride: 'TODO', groom: 'TODO' },
+  couple: { bride: 'Алина', groom: 'TODO' },
+  hosts: 'Семья Тулешовых',
   event: {
-    date: '2026-08-28',          // TODO
-    time: '15:00',               // TODO
-    rsvpDeadline: '2026-08-14',  // TODO
-    city: 'TODO'
+    title: 'Кыз Узату',
+    date: '2026-11-28',
+    time: '17:00',
+    utcOffset: '+04:00',         // Астрахань
+    rsvpDeadline: '2026-11-14',  // TODO
+    city: 'Астрахань'
   },
-  registry: {                    // ЗАГС
-    title: 'TODO',
-    address: 'TODO',
-    gatherTime: 'TODO',
-    ceremonyTime: 'TODO',
-    mapUrl: 'TODO'
+  // Закрытый конверт, первый экран.
+  envelope: {
+    eyebrow: 'Приглашение на Кыз Узату',
+    title: 'Алина',
+    monogram: 'А',
+    open: 'Открыть приглашение'
   },
+  // Открытка, которая выезжает из конверта.
+  cover: {
+    eyebrow: 'Кыз Узату',
+    title: 'Алина',
+    text: 'С огромной радостью приглашаем вас на наш особенный день',
+    photo: { src: '/images/cover.svg', alt: 'TODO' }
+  },
+  invitation: {
+    eyebrow: 'Ждём вас в',
+    title: 'Астрахани',
+    dateLine: 'в субботу, 28 ноября 2026',
+    timeLine: 'начало в 17:00',
+    text: 'С огромной радостью приглашаем вас на наш особенный день и разделить с нами эту трогательную и важную дату.'
+  },
+  registry: null,                // ЗАГС: { title, address, gatherTime, ceremonyTime, mapUrl, photos } либо null
   venue: {                       // банкет
-    title: 'TODO',
-    address: 'TODO',
-    startTime: 'TODO',
+    title: 'Банкетный зал «Европейский»',
+    address: 'г. Астрахань, Каспийская улица, 2Б',
+    startTime: '17:00',
     endTime: 'TODO',
-    mapUrl: 'TODO',
+    mapUrl: 'https://yandex.ru/maps/?text=...',
     photos: []
   },
-  timeline: [
-    { time: 'TODO', title: 'TODO', caption: 'TODO' }
-  ],
-  dressCode: { palette: [], text: 'TODO' },
-  gifts: 'TODO',
-  transfer: null,                // TODO: маршрут и время, либо null
-  contacts: [{ role: 'TODO', name: 'TODO', phone: 'TODO', telegram: 'TODO' }],
+  timeline: [],                  // для бота (5.2), на сайте не выводится
+  dressCode: {
+    text: 'TODO',
+    palette: [{ hex: '#6e6b3c', name: 'олива' }]  // TODO
+  },
+  gifts: null,                   // TODO: текст либо null, для бота
+  transfer: null,                // TODO: { route, time } либо null
+  contacts: [],                  // TODO: для бота
   menu: {
     multiSelect: false,          // TODO: одно блюдо или несколько
-    courses: [{ id: 'TODO', label: 'TODO' }],
-    drinks: [{ id: 'TODO', label: 'TODO' }]
+    courses: [{ id: 'todo-course', label: 'TODO' }],
+    drinks: [{ id: 'todo-drink', label: 'TODO' }]
   },
   music: { enabled: true, src: '/audio/TODO.mp3' },
-  gallery: [],
+  // Заголовки и подписи секций страницы приглашения.
+  sections: {
+    location: {
+      eyebrow: 'Место',
+      title: 'Где праздник',
+      venueStart: 'Сбор гостей в',
+      registryGather: 'Сбор в',
+      registryCeremony: 'Церемония в'
+    },
+    dressCode: { eyebrow: 'Дресс-код', title: 'Цвета вечера' },
+    farewell: { eyebrow: 'С любовью' }
+  },
   // Подписи UI-примитивов. Слайс передаёт их примитиву пропсами, см. раздел 8.
   ui: {
     countdown: {
@@ -477,6 +512,33 @@ export const content = {
   }
 } satisfies Content;
 ```
+
+### Схема контента
+
+`content/schema.ts` экспортирует `contentSchema`, `type Content = z.input<typeof contentSchema>` (его проверяет `satisfies` в `wedding.ts`), `type ContentData = z.output<typeof contentSchema>` и `parseContent(raw: unknown): ContentData`. Ошибка парсинга перечисляет пути и сообщения.
+
+- Все объекты строгие: неизвестный ключ отвергается.
+- Текстовые поля: непустая строка, `'TODO'` допустим.
+- `event.date`, `event.rsvpDeadline`: реальная календарная дата `YYYY-MM-DD`, дедлайн не позже даты события. `event.time`: `HH:MM`. `event.utcOffset`: `±HH:MM`. Эти поля участвуют в вычислениях, литерал `'TODO'` в них недопустим.
+- Время только для показа (`registry.gatherTime`, `registry.ceremonyTime`, `venue.startTime`, `venue.endTime`, `transfer.time`): `HH:MM` или `'TODO'`.
+- `mapUrl`: абсолютный `https` URL или `'TODO'`.
+- Картинки `{ src, alt }`: `src` путь от корня (`/images/...`) или `https` URL, `alt` непустой.
+- `dressCode.palette[]`: `{ hex: '#rrggbb'; name: string }`.
+- `timeline[]`: `{ time: HH:MM | 'TODO'; title; caption; icon: 'pin' | 'rings' | 'dish' }`.
+- `transfer`: `{ route: string; time: string }` либо `null`.
+- `contacts[]`: `{ role; name; phone: string | null; telegram: string | null }`, хотя бы одно из `phone` и `telegram` задано. `telegram` это username без `@`.
+- `menu.courses[]`, `menu.drinks[]`: `id` в формате slug `[a-z0-9-]+`, без повторов внутри списка.
+- `music.src`: путь от корня.
+- `ui.countdown.*`: `PluralForms`, три непустые строки.
+- `byAudience`: ровно три ключа `Audience`, `address` из `'ты' | 'вы'`.
+
+Дефолты, если поле не указано: `registry` → `null`, `registry.photos` и `venue.photos` → `[]`, `timeline` → `[]`, `dressCode.palette` → `[]`, `gifts` → `null`, `transfer` → `null`, `contacts` → `[]`, `menu.multiSelect` → `false`. Property-тест: снятие любого набора полей с дефолтом даёт ровно дефолт и не меняет остальное, `parseContent` идемпотентен на своём выходе.
+
+Время начала события для обратного отсчёта и напоминаний: `${date}T${time}:00${utcOffset}`, чистая функция в `content/event.ts`.
+
+### Доставка контента
+
+`lib/server/content.ts` экспортирует `getContent()`: парсит `wedding.ts` один раз и кэширует. `hooks.server.ts` вызывает его в `init`, битый контент роняет старт. Роуты `(site)` получают `ContentData` через `load` из `(site)/+layout.server.ts`. Компоненты импортируют из `content/schema.ts` только типы, zod в клиентский бандл не попадает.
 
 Плейсхолдеры `TODO` допустимы в разработке. Стадия 7 не считается закрытой, пока в файле остаётся хотя бы один `TODO`. Тест `content.test.ts` на стадии 7 падает при наличии `TODO`.
 
@@ -532,10 +594,23 @@ export const content = {
 Токены дизайна в CSS-переменных, `app.css`:
 
 ```
---c-ink: #1b1b1b; --c-paper: #f7f7f5; --c-forest: #12352c; --c-muted: #8a8a85;
+--c-ink: #2f2a22; --c-paper: #f4efe4; --c-ivory: #fbf8f0; --c-muted: #7d7662;
+--c-olive: #6e6b3c; --c-olive-deep: #4c4a28; --c-wine: #7a1e2c;
 --font-display, --font-script, --font-body
 --space-section, --radius, --dur-fast, --dur-slow, --ease-out
 ```
+
+Шрифты: `--font-display` и `--font-body` Cormorant Garamond, `--font-script` Great Vibes. Manrope не используется. Один визуальный мир «бумага и бархат», тёмной темы нет.
+
+### Конверт
+
+Локальный компонент слайса `(site)/i`, не примитив.
+
+- Закрытый конверт на весь экран поверх открытки: оливковый бархат, клапан с кружевным краем, сургучная печать с `envelope.monogram`, тексты из `envelope`. Геометрия на CSS и inline SVG, без растровых картинок, чтобы не ухудшать LCP.
+- Открывается по нажатию на печать или кнопку `envelope.open`, с клавиатуры тоже: печать исчезает, клапан откидывается, открытка выезжает, конверт растворяется. Анимация через `motion` и токены `--dur-*`, `--ease-out`.
+- Показывается один раз за сессию вкладки (`sessionStorage`). Класс на `<html>` ставит inline-скрипт в `app.html` до отрисовки, повторный заход не мигает конвертом.
+- Без JS и при `prefers-reduced-motion: reduce` конверт не показывается, страница начинается с открытки.
+- Звук по умолчанию выключен, открытие конверта музыку не включает.
 
 Анимации: все `Reveal` уважают `prefers-reduced-motion: reduce` и тогда рендерят контент без трансформаций. Ни одна анимация не блокирует контент: если JS не загрузился, содержимое видно.
 
@@ -655,13 +730,14 @@ USE_FAKE_TELEGRAM=true
 
 ### Стадия 1. Публичный сайт
 
-- **1.1** Контент-схема и `wedding.ts` с плейсхолдерами, валидация при старте.
+- **1.1** Контент-схема из раздела 7, `wedding.ts` с данными и плейсхолдерами, `getContent()`, валидация при старте.
   Тесты: схема отвергает битый конфиг, property-тест на дефолты.
-- **1.2** Обложка: фото, имена, дата, `Countdown`, `AudioToggle`.
+- **1.2** Открытка на `(site)/i`: палитра токенов, фото в овальной рамке, имя, плашка с датой, текст приглашения, `Countdown`, `AudioToggle`.
   Приёмка: LCP первого экрана меньше 2.5 с на мобиле, звук по умолчанию выключен.
-- **1.3** Секции мудборда и галереи, scroll-reveal.
-- **1.4** Локация: `MapCard` для ЗАГСа и площадки, ссылки на карты.
-- **1.5** Тайминг дня из конфига, дресс-код, подарки, контакты.
+- **1.3** Конверт по разделу 8 и scroll-reveal секций.
+  Приёмка: открывается кликом и с клавиатуры, повторный заход в той же вкладке без конверта, без JS и при reduced motion контент виден сразу, LCP по-прежнему меньше 2.5 с.
+- **1.4** Место: `MapCard` площадки со ссылкой на карты, `MapCard` ЗАГСа только при `registry !== null`.
+- **1.5** Дресс-код с палитрой, подвал с подписью семьи и монограммой.
 
 ### Стадия 2. Идентификация гостя
 
