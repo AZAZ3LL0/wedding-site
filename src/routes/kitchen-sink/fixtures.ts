@@ -1,7 +1,15 @@
 // Sample data for the dev-only showcase. Site copy lives in $lib/content, not here.
 import type { PluralForms } from '$lib/types';
 
-export const colorTokens = ['--c-ink', '--c-paper', '--c-forest', '--c-muted'] as const;
+export const colorTokens = [
+	'--c-ink',
+	'--c-paper',
+	'--c-ivory',
+	'--c-muted',
+	'--c-olive',
+	'--c-olive-deep',
+	'--c-wine'
+] as const;
 
 export const fontTokens = [
 	{ token: '--font-display', className: 'font-display text-4xl' },

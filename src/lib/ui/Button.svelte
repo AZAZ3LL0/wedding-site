@@ -26,10 +26,10 @@
 	disabled={disabled || loading}
 	aria-busy={loading}
 	class={[
-		'relative inline-flex min-h-11 items-center justify-center rounded-token px-6 py-3 font-medium transition-opacity duration-(--dur-fast) ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest disabled:opacity-60',
+		'relative inline-flex min-h-11 items-center justify-center rounded-token px-6 py-3 font-medium transition-opacity duration-(--dur-fast) ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-olive disabled:opacity-60',
 		variant === 'solid'
-			? 'bg-forest text-paper hover:opacity-90'
-			: 'border border-forest text-forest hover:bg-forest/5',
+			? 'bg-olive text-ivory hover:bg-olive-deep'
+			: 'border border-olive text-olive-deep hover:bg-olive/5',
 		className
 	]}
 >

@@ -18,10 +18,10 @@
 <div class="flex flex-col gap-2">
 	<label for={id} id="{id}-label" class="text-sm font-medium">
 		{label}
-		{#if required}<span class="text-forest" aria-hidden="true">*</span>{/if}
+		{#if required}<span class="text-wine" aria-hidden="true">*</span>{/if}
 	</label>
 	{@render children(id)}
 	{#if error}
-		<p id="{id}-error" class="text-sm font-medium text-ink" aria-live="polite">{error}</p>
+		<p id="{id}-error" class="text-sm font-medium text-wine" aria-live="polite">{error}</p>
 	{/if}
 </div>

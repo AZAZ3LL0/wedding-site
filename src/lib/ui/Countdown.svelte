@@ -29,7 +29,7 @@
 	{#each units as unit (unit.key)}
 		<span class="flex flex-col">
 			<span class="font-display text-4xl tabular-nums">{unit.value}</span>
-			<span class="text-xs tracking-widest text-muted uppercase">
+			<span class="text-xs tracking-widest text-olive uppercase">
 				{pluralForm(unit.value, unit.forms)}
 			</span>
 		</span>

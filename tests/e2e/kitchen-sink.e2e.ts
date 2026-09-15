@@ -24,17 +24,17 @@ const primitives = [
 test('kitchen-sink applies design tokens and fonts', async ({ page }) => {
 	await page.goto('/kitchen-sink');
 
-	await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(247, 247, 245)');
-	await expect(page.locator('[data-token="--c-forest"]')).toHaveCSS(
+	await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(244, 239, 228)');
+	await expect(page.locator('[data-token="--c-olive"]')).toHaveCSS(
 		'background-color',
-		'rgb(18, 53, 44)'
+		'rgb(110, 107, 60)'
 	);
 
 	const loaded = await page.evaluate(async () => {
 		await document.fonts.ready;
 		return [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family);
 	});
-	expect(new Set(loaded)).toEqual(new Set(['Cormorant Garamond', 'Great Vibes', 'Manrope']));
+	expect(new Set(loaded)).toEqual(new Set(['Cormorant Garamond', 'Great Vibes']));
 });
 
 test('kitchen-sink renders every primitive from §8', async ({ page }) => {
