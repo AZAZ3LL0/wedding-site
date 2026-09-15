@@ -109,3 +109,22 @@ export async function findUnknownRequest(
 		.where(eq(unknownRequests.id, id));
 	return row ?? null;
 }
+
+export type NewParty = Omit<typeof parties.$inferInsert, 'id' | 'createdAt'>;
+export type NewGuest = Omit<typeof guests.$inferInsert, 'id' | 'partyId' | 'createdAt'>;
+
+// Party and guest land together or not at all, so a failed registration leaves no empty party.
+export async function insertPartyWithGuest(
+	db: Db,
+	party: NewParty,
+	guest: NewGuest
+): Promise<string> {
+	return db.transaction(async (tx) => {
+		const [createdParty] = await tx.insert(parties).values(party).returning({ id: parties.id });
+		const [createdGuest] = await tx
+			.insert(guests)
+			.values({ ...guest, partyId: createdParty!.id })
+			.returning({ id: guests.id });
+		return createdGuest!.id;
+	});
+}
