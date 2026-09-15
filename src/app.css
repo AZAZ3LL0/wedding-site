@@ -91,6 +91,8 @@
 	body {
 		font-size: 1.1875rem;
 		line-height: 1.55;
+		/* Cormorant defaults to old-style figures, which make dates and times look uneven. */
+		font-variant-numeric: lining-nums;
 	}
 }
 
@@ -98,4 +100,14 @@
 	html.js [data-reveal]:not([data-revealed]) {
 		opacity: 0;
 	}
+}
+
+/* Small caps line above a heading: «Кыз Узату», «Место». Olive keeps 4.8:1 on paper. */
+@utility eyebrow {
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 0.8125rem;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+	color: var(--c-olive);
 }
