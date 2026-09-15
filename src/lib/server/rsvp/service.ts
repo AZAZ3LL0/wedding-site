@@ -1,6 +1,8 @@
 import type { ContentData } from '$lib/content/schema';
+import type { Db } from '$lib/server/db';
 import { showsRegistry } from '$lib/server/guests/segment';
 import type { GuestPublic, RsvpPayload } from '$lib/types';
+import { setTelegramUsername, upsertRsvp, withLockedGuest } from './repo';
 
 export type RsvpRejection =
 	| 'companionNotAllowed'
@@ -117,4 +119,31 @@ export function checkRsvp(
 			companion
 		}
 	};
+}
+
+export type RsvpSource = 'web' | 'bot';
+
+export type SubmitResult =
+	| { kind: 'saved'; created: boolean; updatedAt: string }
+	| { kind: 'rejected'; reason: RsvpRejection }
+	| { kind: 'missing' };
+
+// The only write path for an answer, shared by the web form and the bot (tech.md §6).
+export async function submitRsvp(
+	db: Db,
+	guestId: string,
+	payload: RsvpPayload,
+	{ content, source }: { content: RulesContent; source: RsvpSource }
+): Promise<SubmitResult> {
+	return withLockedGuest(db, guestId, async (tx, guest) => {
+		if (!guest) return { kind: 'missing' };
+
+		const checked = checkRsvp(payload, guest, content);
+		if (!checked.ok) return { kind: 'rejected', reason: checked.reason };
+
+		const { answer, telegramUsername } = checked.value;
+		const saved = await upsertRsvp(tx, guest.id, answer, source);
+		await setTelegramUsername(tx, guest.id, telegramUsername);
+		return { kind: 'saved', created: saved.created, updatedAt: saved.updatedAt.toISOString() };
+	});
 }
