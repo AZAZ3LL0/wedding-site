@@ -82,6 +82,8 @@ describe('parseContent', () => {
 		['a menu id that is not a slug', withValue(['menu', 'drinks'], [{ id: 'Сок', label: 'Сок' }])],
 		['two plural forms instead of three', withValue(['ui', 'countdown', 'days'], ['день', 'дня'])],
 		['a missing audience', without(['byAudience', 'colleagues'])],
+		['an audience without a label', without(['byAudience', 'friends', 'label'])],
+		['a blank entry title', withValue(['entry', 'title'], ' ')],
 		['an unknown form of address', withValue(['byAudience', 'family', 'address'], 'Вы')],
 		['a music path from the page', withValue(['music', 'src'], 'audio/track.mp3')]
 	])('rejects %s', (_, raw) => {
