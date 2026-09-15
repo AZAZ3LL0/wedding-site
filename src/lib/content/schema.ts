@@ -161,6 +161,16 @@ export const contentSchema = z.strictObject({
 		chooseText: text,
 		notListed: text
 	}),
+	unknown: z.strictObject({
+		title: text,
+		text,
+		nameLabel: text,
+		contactLabel: text,
+		contactPlaceholder: text,
+		submit: text,
+		sent: text,
+		failed: text
+	}),
 	ui: z.strictObject({
 		countdown: z.strictObject({
 			days: pluralForms,
