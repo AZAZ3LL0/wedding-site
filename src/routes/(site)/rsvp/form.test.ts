@@ -72,7 +72,12 @@ describe('readForm and toPayload', () => {
 	});
 
 	it('round-trips a saved answer through the form unchanged', () => {
-		const values = valuesOf(answer, 'guest');
+		const values = valuesOf(answer, 'guest', {
+			firstName: 'Ольга',
+			lastName: 'Смирнова',
+			mainCourses: ['fish'],
+			drinks: []
+		});
 		const posted = formData([
 			['attending', values.attending!],
 			...(values.attendingRegistry ? [['attendingRegistry', 'yes'] as [string, string]] : []),
@@ -81,7 +86,11 @@ describe('readForm and toPayload', () => {
 			['allergies', values.allergies],
 			...(values.needsTransfer ? [['needsTransfer', 'yes'] as [string, string]] : []),
 			['comment', values.comment],
-			['telegramUsername', values.telegramUsername]
+			['telegramUsername', values.telegramUsername],
+			['companion', 'yes'],
+			['companionFirstName', values.companionFirstName],
+			['companionLastName', values.companionLastName],
+			...values.companionCourses.map((id): [string, string] => ['companionCourses', id])
 		]);
 		expect(readForm(posted)).toEqual(values);
 		expect(values.telegramUsername).toBe('@guest');
@@ -97,9 +106,53 @@ describe('readForm and toPayload', () => {
 	});
 });
 
+describe('companion fields', () => {
+	const posted = (attending: string, firstName: string) =>
+		readForm(
+			formData([
+				['attending', attending],
+				['companion', 'yes'],
+				['companionFirstName', firstName],
+				['companionLastName', ' Смирнова '],
+				['companionCourses', 'fish'],
+				['companionDrinks', 'tea']
+			])
+		);
+
+	it('sends the companion with trimmed names when the toggle is on', () => {
+		expect(toPayload(posted('yes', ' Ольга '))).toMatchObject({
+			ok: true,
+			payload: {
+				companion: {
+					firstName: 'Ольга',
+					lastName: 'Смирнова',
+					mainCourses: ['fish'],
+					drinks: ['tea']
+				}
+			}
+		});
+	});
+
+	it('asks for the companion name when the toggle is on and the name is blank', () => {
+		expect(toPayload(posted('yes', '   '))).toEqual({ ok: false, error: 'companionNameRequired' });
+	});
+
+	it('ignores companion fields when the toggle is off', () => {
+		const values = { ...posted('yes', 'Ольга'), companion: false };
+		expect(toPayload(values)).toMatchObject({ ok: true, payload: { companion: null } });
+	});
+
+	it('drops a companion left checked by a guest who declines, since the block is hidden', () => {
+		expect(toPayload(posted('no', 'Ольга'))).toMatchObject({
+			ok: true,
+			payload: { attending: 'no', companion: null }
+		});
+	});
+});
+
 describe('valuesOf', () => {
 	it('starts an unanswered form empty', () => {
-		expect(valuesOf(null, null)).toEqual({
+		expect(valuesOf(null, null, null)).toEqual({
 			attending: null,
 			attendingRegistry: false,
 			mainCourses: [],
@@ -107,7 +160,12 @@ describe('valuesOf', () => {
 			allergies: '',
 			needsTransfer: false,
 			comment: '',
-			telegramUsername: ''
+			telegramUsername: '',
+			companion: false,
+			companionFirstName: '',
+			companionLastName: '',
+			companionCourses: [],
+			companionDrinks: []
 		});
 	});
 });
@@ -115,6 +173,7 @@ describe('valuesOf', () => {
 describe('errorOf', () => {
 	it('names a stale menu option and folds the rest into a generic message', () => {
 		expect(errorOf('unknownOption')).toBe('unknownOption');
+		expect(errorOf('companionNotAttending')).toBe('companionNotAttending');
 		expect(errorOf('tooManyCourses')).toBe('invalid');
 		expect(errorOf('companionNotAllowed')).toBe('invalid');
 	});
