@@ -52,6 +52,15 @@ test('the guest answers yes, sees the summary and finds the answer again', async
 	await link.click();
 	await expect(page).toHaveURL('/thanks');
 
+	// The organizer hears about it through rsvp.notify-admin; the fake client keeps the message.
+	await page.goto('/kitchen-sink/telegram');
+	const notice = page
+		.locator('[data-message]')
+		.filter({ hasText: GUEST })
+		.filter({ hasText: 'Аллергии: Орехи' });
+	await expect(notice.first()).toBeVisible({ timeout: 15_000 });
+	await expect(notice.first()).toContainText('@maria_ivanova');
+
 	await page.goto('/rsvp');
 	const saved = form(page);
 	await expect(saved.getByLabel(rsvp.attendingYes)).toBeChecked();
