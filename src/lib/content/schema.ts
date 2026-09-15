@@ -68,6 +68,7 @@ const contact = z
 	});
 
 const audienceCopy = z.strictObject({
+	label: text,
 	greeting: text,
 	address: z.enum(['ты', 'вы']),
 	showRegistry: z.boolean()
@@ -147,6 +148,18 @@ export const contentSchema = z.strictObject({
 		}),
 		dressCode: z.strictObject({ eyebrow: text, title: text }),
 		farewell: z.strictObject({ eyebrow: text })
+	}),
+	entry: z.strictObject({
+		eyebrow: text,
+		title: text,
+		nameLabel: text,
+		namePlaceholder: text,
+		submit: text,
+		nameRequired: text,
+		notFound: text,
+		chooseTitle: text,
+		chooseText: text,
+		notListed: text
 	}),
 	ui: z.strictObject({
 		countdown: z.strictObject({

@@ -72,6 +72,18 @@ export const content = {
 		dressCode: { eyebrow: 'Дресс-код', title: 'Цвета вечера' },
 		farewell: { eyebrow: 'С любовью' }
 	},
+	entry: {
+		eyebrow: 'Приглашение на Кыз Узату',
+		title: 'Найдите своё приглашение',
+		nameLabel: 'Имя и фамилия',
+		namePlaceholder: 'Например, Анна Иванова',
+		submit: 'Открыть приглашение',
+		nameRequired: 'Введите имя и фамилию',
+		notFound: 'Не нашли вас в списке. Проверьте написание или оставьте заявку.',
+		chooseTitle: 'У вас есть тёзка',
+		chooseText: 'Выберите, какое приглашение ваше',
+		notListed: 'Меня нет в списке'
+	},
 	ui: {
 		countdown: {
 			days: ['день', 'дня', 'дней'],
@@ -83,8 +95,8 @@ export const content = {
 		map: { open: 'Открыть на карте' }
 	},
 	byAudience: {
-		family: { greeting: 'TODO', address: 'ты', showRegistry: true },
-		friends: { greeting: 'TODO', address: 'ты', showRegistry: false },
-		colleagues: { greeting: 'TODO', address: 'вы', showRegistry: false }
+		family: { label: 'родные', greeting: 'TODO', address: 'ты', showRegistry: true },
+		friends: { label: 'друзья', greeting: 'TODO', address: 'ты', showRegistry: false },
+		colleagues: { label: 'коллеги', greeting: 'TODO', address: 'вы', showRegistry: false }
 	}
 } satisfies Content;
