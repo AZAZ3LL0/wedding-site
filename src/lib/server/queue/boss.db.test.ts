@@ -5,7 +5,10 @@ import { FakeTelegramClient } from '$lib/server/telegram/fake';
 import { startQueue, type Queue } from './boss';
 import { insertUnknownRequest } from '$lib/server/guests/repo';
 import { DEMO_PING } from './jobs/demo-ping';
+import { RSVP_NOTIFY_ADMIN } from './jobs/rsvp-notify-admin';
 import { UNKNOWN_NOTIFY_ADMIN } from './jobs/unknown-notify-admin';
+import { guests, parties, rsvps } from '$lib/server/db/schema';
+import { nameKey } from '$lib/server/guests/name-key';
 
 const databaseUrl = inject('databaseUrl');
 const { db, close } = createDb(databaseUrl);
@@ -105,5 +108,46 @@ describe('pg-boss wiring', () => {
 			expect(job?.state).toBe('completed');
 		}, settle);
 		expect(telegram.sent.filter((m) => m.text.includes(rawName))).toHaveLength(1);
+	});
+
+	it('notifies the admin about an answer once per saved state, even when queued twice', async () => {
+		const lastName = `Ответов${randomUUID().slice(0, 8)}`;
+		const [party] = await db
+			.insert(parties)
+			.values({ title: 'Очередь', audience: 'friends' })
+			.returning({ id: parties.id });
+		const [guest] = await db
+			.insert(guests)
+			.values({
+				partyId: party!.id,
+				firstName: 'Олег',
+				lastName,
+				displayName: 'Олег',
+				nameKey: nameKey(`Олег ${lastName}`),
+				botToken: randomUUID()
+			})
+			.returning({ id: guests.id });
+		const [answer] = await db
+			.insert(rsvps)
+			.values({ guestId: guest!.id, attending: 'yes', source: 'web' })
+			.returning({ updatedAt: rsvps.updatedAt });
+		const job = {
+			guestId: guest!.id,
+			kind: 'created' as const,
+			updatedAt: answer!.updatedAt.toISOString()
+		};
+
+		const [first, second] = await Promise.all([
+			queue.sendRsvpNotifyAdmin(job),
+			queue.sendRsvpNotifyAdmin(job)
+		]);
+
+		const id = first ?? second;
+		expect([first, second].filter(Boolean)).toHaveLength(1);
+		await vi.waitFor(async () => {
+			const state = (await queue.boss.getJobById(RSVP_NOTIFY_ADMIN, id as string))?.state;
+			expect(state).toBe('completed');
+		}, settle);
+		expect(telegram.sent.filter((m) => m.text.includes(lastName))).toHaveLength(1);
 	});
 });
