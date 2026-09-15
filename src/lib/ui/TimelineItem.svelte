@@ -28,7 +28,7 @@
 		{/if}
 	</svg>
 	<div>
-		<p class="font-display text-2xl tabular-nums">{time}</p>
+		<p class="font-display text-2xl lining-nums tabular-nums">{time}</p>
 		<p class="font-medium">{title}</p>
 		<p class="text-sm text-olive">{caption}</p>
 	</div>
