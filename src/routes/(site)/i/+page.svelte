@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import Cover from './Cover.svelte';
+	import DressCode from './DressCode.svelte';
 	import Envelope from './Envelope.svelte';
+	import Farewell from './Farewell.svelte';
 	import Invitation from './Invitation.svelte';
 	import Location from './Location.svelte';
 
@@ -28,13 +30,26 @@
 	}}
 />
 
-<main tabindex="-1" inert={covering} bind:this={main} class="outline-none">
-	<Cover cover={content.cover} date={content.event.date} />
-	<Invitation invitation={content.invitation} event={content.event} labels={content.ui.countdown} />
-	<Location
-		registry={content.registry}
-		venue={content.venue}
-		labels={content.sections.location}
-		linkLabel={content.ui.map.open}
+<div inert={covering}>
+	<main tabindex="-1" bind:this={main} class="outline-none">
+		<Cover cover={content.cover} date={content.event.date} />
+		<Invitation
+			invitation={content.invitation}
+			event={content.event}
+			labels={content.ui.countdown}
+		/>
+		<Location
+			registry={content.registry}
+			venue={content.venue}
+			labels={content.sections.location}
+			linkLabel={content.ui.map.open}
+		/>
+		<DressCode dressCode={content.dressCode} labels={content.sections.dressCode} />
+	</main>
+
+	<Farewell
+		eyebrow={content.sections.farewell.eyebrow}
+		monogram={content.envelope.monogram}
+		hosts={content.hosts}
 	/>
-</main>
+</div>
