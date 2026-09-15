@@ -3,10 +3,8 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from 'vitest';
 import { createDb } from '$lib/server/db';
 import { FakeTelegramClient } from '$lib/server/telegram/fake';
 import { startQueue, type Queue } from './boss';
-import { insertUnknownRequest } from '$lib/server/guests/repo';
 import { DEMO_PING } from './jobs/demo-ping';
 import { RSVP_NOTIFY_ADMIN } from './jobs/rsvp-notify-admin';
-import { UNKNOWN_NOTIFY_ADMIN } from './jobs/unknown-notify-admin';
 import { guests, parties, rsvps } from '$lib/server/db/schema';
 import { nameKey } from '$lib/server/guests/name-key';
 
@@ -91,23 +89,6 @@ describe('pg-boss wiring', () => {
 		const job = await queue.boss.getJobById(DEMO_PING, id as string);
 		expect(job?.retryCount).toBe(0);
 		expect(messagesAbout(pingId)).toHaveLength(0);
-	});
-
-	it('notifies the admin about an unknown request once, even when queued twice', async () => {
-		const rawName = `Незнакомец ${randomUUID().slice(0, 8)}`;
-		const requestId = await insertUnknownRequest(db, { rawName, contact: null });
-		const [first, second] = await Promise.all([
-			queue.sendUnknownNotifyAdmin(requestId),
-			queue.sendUnknownNotifyAdmin(requestId)
-		]);
-
-		const id = first ?? second;
-		expect([first, second].filter(Boolean)).toHaveLength(1);
-		await vi.waitFor(async () => {
-			const job = await queue.boss.getJobById(UNKNOWN_NOTIFY_ADMIN, id as string);
-			expect(job?.state).toBe('completed');
-		}, settle);
-		expect(telegram.sent.filter((m) => m.text.includes(rawName))).toHaveLength(1);
 	});
 
 	it('notifies the admin about an answer once per saved state, even when queued twice', async () => {

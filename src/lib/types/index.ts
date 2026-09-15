@@ -65,9 +65,6 @@ export type MatchResult =
 export const demoPingJobSchema = z.object({ pingId: z.uuid() });
 export type DemoPingJob = z.infer<typeof demoPingJobSchema>;
 
-export const unknownNotifyAdminJobSchema = z.object({ requestId: z.uuid() });
-export type UnknownNotifyAdminJob = z.infer<typeof unknownNotifyAdminJobSchema>;
-
 export const rsvpNotifyAdminJobSchema = z.object({
 	guestId: z.uuid(),
 	kind: z.enum(['created', 'updated']),
