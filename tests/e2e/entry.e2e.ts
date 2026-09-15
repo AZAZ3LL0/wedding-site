@@ -1,30 +1,48 @@
 import { expect, test, type Page } from '@playwright/test';
 import { content } from '../../src/lib/content/wedding';
 
-const { entry, byAudience } = content;
+const { entry, byAudience, rsvp } = content;
 
-const nameInput = (page: Page) =>
-	page.getByRole('form', { name: entry.title }).getByLabel(entry.nameLabel);
+const entryForm = (page: Page) => page.getByRole('form', { name: entry.title });
+const knownForm = (page: Page) => page.getByRole('form', { name: entry.knownTitle });
 
-async function enterName(page: Page, name: string) {
-	await page.goto('/');
-	await nameInput(page).fill(name);
-	await page.getByRole('form', { name: entry.title }).getByRole('button').click();
+// Letters only, so every run registers a surname nobody else has.
+function newcomer() {
+	const letters = 'абвгдежзиклмнопрстуфхцчшэюя';
+	const suffix = Array.from({ length: 8 }, () => letters[Math.floor(Math.random() * 26)]).join('');
+	return { firstName: 'Злата', lastName: `Новикова${suffix}` };
 }
 
-test('sends a visitor without a session from the invitation to the name form', async ({ page }) => {
-	await page.goto('/i');
-	await expect(page).toHaveURL('/');
-	await expect(nameInput(page)).toBeVisible();
+async function enterName(page: Page, firstName: string, lastName: string) {
+	await page.goto('/');
+	await entryForm(page).getByLabel(entry.firstNameLabel).fill(firstName);
+	await entryForm(page).getByLabel(entry.lastNameLabel).fill(lastName);
+	await entryForm(page).getByRole('button', { name: entry.submit }).click();
+}
+
+const hasSession = async (page: Page) =>
+	(await page.context().cookies()).some((c) => c.name === 'guest_session');
+
+test.beforeEach(async ({ page }) => {
+	await page.addInitScript(() => sessionStorage.setItem('envelope-opened', '1'));
 });
 
-test('opens the invitation for a listed name and keeps the guest signed in', async ({ page }) => {
-	await enterName(page, 'иванов иван');
+test('sends a visitor without a session from the invitation to the entry form', async ({
+	page
+}) => {
+	await page.goto('/i');
+	await expect(page).toHaveURL('/');
+	await expect(entryForm(page).getByLabel(entry.firstNameLabel)).toBeVisible();
+});
+
+test('registers a new guest, keeps them signed in and lets them answer', async ({ page }) => {
+	const name = newcomer();
+	await enterName(page, name.firstName, name.lastName);
 	await expect(page).toHaveURL('/i');
+	await expect(page.locator('[data-welcome]')).toContainText(name.firstName);
 
 	await page.reload();
 	await expect(page).toHaveURL('/i');
-
 	// The shared link lands straight on the card for a returning guest.
 	await page.goto('/');
 	await expect(page).toHaveURL('/i');
@@ -34,55 +52,119 @@ test('opens the invitation for a listed name and keeps the guest signed in', asy
 	const days = (cookie!.expires * 1000 - Date.now()) / (24 * 60 * 60 * 1000);
 	expect(days).toBeGreaterThan(89.9);
 	expect(days).toBeLessThanOrEqual(90);
+
+	// A self-registered guest may bring a companion.
+	await page.goto('/rsvp');
+	await expect(page.getByLabel(rsvp.companionOption)).toBeAttached();
 });
 
-test('lets a namesake choose instead of opening someone else’s invitation', async ({ page }) => {
-	await enterName(page, 'Анна Сидорова');
+test('a returning guest on another device picks their own card instead of a duplicate', async ({
+	browser
+}) => {
+	const name = newcomer();
+	const use = test.info().project.use;
 
-	await expect(page).toHaveURL('/');
-	const choice = page.getByRole('form', { name: entry.chooseTitle });
-	await expect(choice).toBeVisible();
-	const options = choice.getByRole('radio');
-	await expect(options).toHaveCount(2);
-	await expect(choice.getByLabel(byAudience.family.label)).toBeVisible();
-	await expect(choice.getByLabel(byAudience.colleagues.label)).toBeVisible();
-	expect((await page.context().cookies()).some((c) => c.name === 'guest_session')).toBe(false);
+	const first = await (await browser.newContext(use)).newPage();
+	await enterName(first, name.firstName, name.lastName);
+	await expect(first).toHaveURL('/i');
+	await first.goto('/rsvp');
+	await first.getByLabel(rsvp.attendingNo).check();
+	await first.getByRole('button', { name: rsvp.submit }).click();
+	await expect(first).toHaveURL('/thanks');
 
-	await choice.getByLabel(byAudience.colleagues.label).check();
-	await choice.getByRole('button', { name: entry.submit }).click();
+	// Another phone, a different case and a typo in the surname.
+	const second = await (await browser.newContext(use)).newPage();
+	await second.addInitScript(() => sessionStorage.setItem('envelope-opened', '1'));
+	await enterName(second, name.firstName.toUpperCase(), `${name.lastName.slice(0, -1)}ы`);
+	await expect(second).toHaveURL('/');
+	expect(await hasSession(second)).toBe(false);
+
+	const known = knownForm(second);
+	await expect(known.getByRole('radio')).toHaveCount(1);
+	await known.getByRole('radio').check();
+	await known.getByRole('button', { name: entry.submit }).click();
+	await expect(second).toHaveURL('/i');
+	// Same card: the answer from the first phone is there.
+	await expect(second.locator('[data-rsvp-link]')).toHaveText(rsvp.ctaAnswered);
+});
+
+test('someone else with the same name opens a new invitation', async ({ page }) => {
+	const name = newcomer();
+	await enterName(page, name.firstName, name.lastName);
 	await expect(page).toHaveURL('/i');
+	await page.context().clearCookies();
+
+	// A new surname each run, so the seed names do not collect duplicates between runs.
+	await enterName(page, name.firstName, name.lastName);
+	await expect(knownForm(page)).toBeVisible();
+	await knownForm(page).getByRole('button', { name: entry.knownNew }).click();
+
+	await expect(page).toHaveURL('/i');
+	await page.context().clearCookies();
+	await enterName(page, name.firstName, name.lastName);
+	await expect(knownForm(page).getByRole('radio')).toHaveCount(2);
 });
 
-test('refuses a chosen card that is not among the namesakes', async ({ page }) => {
-	await enterName(page, 'Анна Сидорова');
-	const choice = page.getByRole('form', { name: entry.chooseTitle });
-	const radio = choice.getByRole('radio').first();
+test('namesakes get hints to tell their cards apart', async ({ page }) => {
+	await enterName(page, 'Анна', 'Сидорова');
 
-	// Ivan Ivanov from the seed: a valid guest, but not an Anna.
+	const known = knownForm(page);
+	await expect(known.getByRole('radio')).toHaveCount(2);
+	await expect(known.getByLabel(byAudience.family.label)).toBeVisible();
+	await expect(known.getByLabel(byAudience.colleagues.label)).toBeVisible();
+
+	await known.getByLabel(byAudience.colleagues.label).check();
+	await known.getByRole('button', { name: entry.submit }).click();
+	await expect(page).toHaveURL('/i');
+	await expect(page.locator('[data-welcome]')).toContainText('Анна Сергеевна');
+});
+
+test('refuses a chosen card that the name does not match', async ({ page }) => {
+	await enterName(page, 'Анна', 'Сидорова');
+	const known = knownForm(page);
+	const radio = known.getByRole('radio').first();
+
+	// Ivan Ivanov from the seed: a real guest, but not an Anna.
 	await radio.evaluate(
 		(el: HTMLInputElement) => (el.value = '00000000-0000-4000-8000-000000000101')
 	);
 	await radio.check();
-	await choice.getByRole('button', { name: entry.submit }).click();
+	await known.getByRole('button', { name: entry.submit }).click();
 
-	await expect(choice).toBeVisible();
+	await expect(knownForm(page)).toBeVisible();
 	await expect(page).toHaveURL('/');
-	expect((await page.context().cookies()).some((c) => c.name === 'guest_session')).toBe(false);
+	expect(await hasSession(page)).toBe(false);
 });
 
-test('says the name is not on the list', async ({ page }) => {
-	await enterName(page, 'Пётр Первый');
-	await expect(page).toHaveURL('/');
-	await expect(page.getByText(entry.notFound)).toBeVisible();
-	await expect(nameInput(page)).toHaveValue('Пётр Первый');
-	await expect(nameInput(page)).toHaveAttribute('aria-invalid', 'true');
+test('asks for a missing surname', async ({ page }) => {
+	await page.goto('/');
+	const form = entryForm(page);
+	await form.evaluate((el: HTMLFormElement) => (el.noValidate = true));
+	await form.getByLabel(entry.firstNameLabel).fill('Злата');
+	await form.getByLabel(entry.lastNameLabel).fill('   ');
+	await form.getByRole('button', { name: entry.submit }).click();
+
+	await expect(page.getByText(entry.lastNameRequired)).toBeVisible();
+	await expect(entryForm(page).getByLabel(entry.lastNameLabel)).toHaveAttribute(
+		'aria-invalid',
+		'true'
+	);
+	await expect(entryForm(page).getByLabel(entry.firstNameLabel)).toHaveValue('Злата');
+	expect(await hasSession(page)).toBe(false);
 });
 
 test.describe('without JavaScript', () => {
 	test.use({ javaScriptEnabled: false });
 
-	test('the form still signs the guest in', async ({ page }) => {
-		await enterName(page, 'Дмитрий Козлов');
+	test('registration and the known card choice work as plain posts', async ({ page }) => {
+		const name = newcomer();
+		await enterName(page, name.firstName, name.lastName);
+		await expect(page).toHaveURL('/i');
+
+		await page.context().clearCookies();
+		await enterName(page, name.firstName, name.lastName);
+		await knownForm(page).getByRole('radio').check();
+		await knownForm(page).getByRole('button', { name: entry.submit }).click();
 		await expect(page).toHaveURL('/i');
 	});
 });
