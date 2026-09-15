@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { getContent } from '$lib/server/content';
 import { getDb } from '$lib/server/db';
+import { getAppQueue } from '$lib/server/queue/boss';
 import { findCompanion, findTelegramUsername } from '$lib/server/rsvp/repo';
 import { isRsvpOpen, submitRsvp } from '$lib/server/rsvp/service';
 import type { Actions, PageServerLoad } from './$types';
@@ -53,6 +54,18 @@ export const actions: Actions = {
 		if (result.kind === 'missing') redirect(303, '/');
 		if (result.kind === 'closed') return failure(403, 'closed', values);
 		if (result.kind === 'rejected') return failure(400, errorOf(result.reason), values);
+
+		// The answer is already saved and shows in the admin, so a queue outage is not the guest's problem.
+		try {
+			const queue = await getAppQueue();
+			await queue.sendRsvpNotifyAdmin({
+				guestId: locals.guest.id,
+				kind: result.created ? 'created' : 'updated',
+				updatedAt: result.updatedAt
+			});
+		} catch (error) {
+			console.error(`[rsvp] ${locals.guest.id} notice not queued:`, (error as Error).message);
+		}
 		redirect(303, '/thanks');
 	}
 };
