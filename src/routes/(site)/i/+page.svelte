@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
+	import Answer from './Answer.svelte';
 	import Cover from './Cover.svelte';
 	import DressCode from './DressCode.svelte';
 	import Envelope from './Envelope.svelte';
@@ -46,6 +47,7 @@
 			linkLabel={content.ui.map.open}
 		/>
 		<DressCode dressCode={content.dressCode} labels={content.sections.dressCode} />
+		<Answer label={data.answered ? content.rsvp.ctaAnswered : content.rsvp.cta} />
 	</main>
 
 	<Farewell
