@@ -1,6 +1,6 @@
 # tech.md
 
-**Версия ядра: v5**
+**Версия ядра: v6**
 
 Changelog:
 
@@ -9,6 +9,7 @@ Changelog:
 - v3: интерфейс `TelegramClient` и `TelegramError`, временный топик `demo.ping`, таблица `job_receipts` для идемпотентности хендлеров без своей таблицы-факта, исправлен ретрай `reminder.send`. Разделы 3, 4, 5, 6, 10.
 - v4: UI-подписи примитивов приходят пропсами из блока `content.ui`, тип `PluralForms`, уточнены пропсы `Reveal`, `Countdown`, `Collage`, `MapCard`, `AudioToggle`, `Field` и проброс HTML-атрибутов у контролов. Разделы 6, 7, 8.
 - v5: дизайн публичного сайта «конверт с открыткой» для Кыз Узату в Астрахани. Полная схема контента с форматами и дефолтами, `event.utcOffset`, блоки `envelope`, `cover`, `invitation`, `sections`, `registry: null`, парсинг контента на сервере и передача через `load`. Палитра токенов олива, бордо, крем, `--font-body` на Cormorant Garamond. Правила конверта. Роадмап стадии 1 без мудборда, галереи, тайминга, подарков и контактов на сайте. ЗАГС в БД и RSVP не меняются. Разделы 3, 7, 8, 13.
+- v6: идентификация гостя. Блоки контента `entry` и `unknown`, поле `byAudience.*.label` для подсказки тёзкам. Топик `unknown.notify-admin` и схема `unknownNotifyAdminJobSchema`. Правила сессии гостя, выбора тёзки и видимости блока ЗАГСа, `guests/segment.ts`. Разделы 3, 5, 6, 7.
 
 Правила изменения файла: только append-only, любое изменение контракта (схема БД, типы в `lib/types`, payload джоба, схема контента) бампает версию и добавляет строку в changelog. Сессия не правит этот файл самостоятельно: при нехватке контракта выдаёт блок `CONTRACT GAP` и ждёт решения.
 
@@ -84,6 +85,7 @@ src/
         name-key.ts          # нормализация имени, чистая функция
         match.ts             # сопоставление имени со списком, чистая функция
         session.ts           # cookie-сессия гостя
+        segment.ts           # что гость видит по аудитории и приглашению в ЗАГС, чистая функция
         repo.ts              # доступ к БД
       rsvp/
         service.ts
@@ -105,6 +107,7 @@ src/
           reminder-schedule.ts
           reminder-send.ts
           rsvp-notify-admin.ts
+          unknown-notify-admin.ts
     ui/                      # примитивы, переиспользуются всеми слайсами
     actions/
       reveal.ts              # scroll-reveal action
@@ -282,6 +285,18 @@ type RsvpNotifyAdminJob = { guestId: string; kind: 'created' | 'updated' };
 
 Отправляет организатору сообщение в Telegram о новом или изменённом ответе. `singletonKey = `${guestId}:${kind}:${updatedAtIso}``, `retryLimit: 3`. Идемпотентность через квитанцию `job_receipts`.
 
+### `unknown.notify-admin`
+
+```ts
+type UnknownNotifyAdminJob = { requestId: string };  // uuid строки unknown_requests
+```
+
+Ставится form action «меня нет в списке» после записи в `unknown_requests`. Отправляет в `TELEGRAM_ADMIN_CHAT_ID` имя и контакт из заявки, текст из `telegram/templates.ts`.
+
+- `singletonKey = requestId`, `retryLimit: 3`, `retryBackoff: true`.
+- Идемпотентность через квитанцию `unknown.notify-admin:<requestId>`.
+- Заявки нет в БД: хендлер выходит успешно без отправки. Ошибка очереди или Telegram не отменяет запись заявки, гость видит успех.
+
 ### Квитанции `job_receipts`
 
 `singletonKey` в pg-boss отсекает дубль, только пока первая задача в очереди или выполняется. Хендлер без собственной таблицы-факта держит идемпотентность сам: в одной транзакции вставляет квитанцию с ключом `<topic>:<singletonKey>` через `ON CONFLICT (key) DO NOTHING` и выполняет эффект. Ноль вставленных строк: хендлер выходит успешно без эффекта. Ошибка эффекта откатывает транзакцию вместе с квитанцией, ретрай выполняет эффект заново.
@@ -390,6 +405,9 @@ export type MatchResult =
 // Payload джобов, см. раздел 5. Хендлер валидирует вход этими схемами.
 export const demoPingJobSchema = z.object({ pingId: z.uuid() });
 export type DemoPingJob = z.infer<typeof demoPingJobSchema>;
+
+export const unknownNotifyAdminJobSchema = z.object({ requestId: z.uuid() });
+export type UnknownNotifyAdminJob = z.infer<typeof unknownNotifyAdminJobSchema>;
 ```
 
 Серверные правила поверх схемы (валидировать в `rsvp/service.ts`, не в zod):
@@ -416,6 +434,24 @@ Property-инварианты для fast-check:
 - изменение регистра и лишние пробелы не меняют ключ
 
 `match.ts` сопоставляет ключ со списком: сначала точное совпадение, затем токенное с расстоянием Левенштейна не больше 2 на токен. Одно совпадение возвращает `single`, несколько возвращает `ambiguous` с подсказкой (первая буква фамилии или группа), ноль возвращает `none`.
+
+Подпись группы в подсказке берётся из `content.byAudience[audience].label`.
+
+### Вход гостя
+
+- `/` форма имени. `single` создаёт сессию и ведёт на `/i`. `ambiguous` показывает выбор по подсказкам. `none` показывает `entry.notFound` и форму «меня нет в списке».
+- Выбор тёзки отправляет имя и `guestId`. Action заново выполняет `match` и принимает `guestId`, только если он среди кандидатов для этого имени.
+- Сессия: строка `guest_sessions` со случайным токеном 32 байта (base64url) в `id`, cookie с тем же токеном. `httpOnly`, `sameSite=lax`, `path=/`, `secure` в production, срок 90 дней от входа, без продления. Истёкшая или неизвестная сессия равна отсутствию сессии.
+- `hooks.server.ts` кладёт `GuestPublic | null` в `locals.guest`. `/i` без гостя перенаправляет на `/`, `/` с гостем перенаправляет на `/i`.
+- «Меня нет в списке»: `rawName` от 1 до 100 символов, `contact` до 100 символов или `null`. Запись в `unknown_requests`, затем `unknown.notify-admin`.
+
+### Сегментация
+
+`guests/segment.ts`, чистая функция от `GuestPublic` и `ContentData`:
+
+- Обращение: `byAudience[audience].greeting` и `displayName` гостя на открытке.
+- Блок ЗАГСа виден, только если `content.registry !== null`, `byAudience[audience].showRegistry` и `invitedToRegistry` у party гостя. Скрытый блок не попадает в данные `load`: ни карточки ЗАГСа, ни времени сбора и церемонии на странице. Форма RSVP (3.1) берёт тот же признак для поля ЗАГСа.
+- Тайминг на сайте равен времени сбора и церемонии ЗАГСа в секции «Место» и подчиняется тому же признаку. `timeline` на сайте по-прежнему не выводится.
 
 ---
 
@@ -493,6 +529,30 @@ export const content = {
     dressCode: { eyebrow: 'Дресс-код', title: 'Цвета вечера' },
     farewell: { eyebrow: 'С любовью' }
   },
+  // Вход по имени и выбор тёзки на `/`, см. раздел 6.
+  entry: {
+    eyebrow: 'Приглашение на Кыз Узату',
+    title: 'Найдите своё приглашение',
+    nameLabel: 'Имя и фамилия',
+    namePlaceholder: 'Например, Анна Иванова',
+    submit: 'Открыть приглашение',
+    nameRequired: 'Введите имя и фамилию',
+    notFound: 'Не нашли вас в списке. Проверьте написание или оставьте заявку.',
+    chooseTitle: 'У вас есть тёзка',
+    chooseText: 'Выберите, какое приглашение ваше',
+    notListed: 'Меня нет в списке'
+  },
+  // Форма «меня нет в списке».
+  unknown: {
+    title: 'Меня нет в списке',
+    text: 'Оставьте имя и способ связи, мы проверим список и ответим',
+    nameLabel: 'Имя и фамилия',
+    contactLabel: 'Телефон или Telegram',
+    contactPlaceholder: '+7 900 000-00-00 или @username',
+    submit: 'Отправить',
+    sent: 'Спасибо! Мы получили заявку и скоро свяжемся с вами',
+    failed: 'Не получилось отправить. Попробуйте ещё раз'
+  },
   // Подписи UI-примитивов. Слайс передаёт их примитиву пропсами, см. раздел 8.
   ui: {
     countdown: {
@@ -504,11 +564,11 @@ export const content = {
     audio: { play: 'Включить музыку', pause: 'Выключить музыку' },
     map: { open: 'Открыть на карте' }
   },
-  // Сегментированные тексты. Ключи совпадают с Audience.
+  // Сегментированные тексты. Ключи совпадают с Audience. `label` подсказывает тёзкам группу.
   byAudience: {
-    family:     { greeting: 'TODO', address: 'ты', showRegistry: true },
-    friends:    { greeting: 'TODO', address: 'ты', showRegistry: false },
-    colleagues: { greeting: 'TODO', address: 'вы', showRegistry: false }
+    family:     { label: 'родные',  greeting: 'TODO', address: 'ты', showRegistry: true },
+    friends:    { label: 'друзья',  greeting: 'TODO', address: 'ты', showRegistry: false },
+    colleagues: { label: 'коллеги', greeting: 'TODO', address: 'вы', showRegistry: false }
   }
 } satisfies Content;
 ```
@@ -530,7 +590,8 @@ export const content = {
 - `menu.courses[]`, `menu.drinks[]`: `id` в формате slug `[a-z0-9-]+`, без повторов внутри списка.
 - `music.src`: путь от корня.
 - `ui.countdown.*`: `PluralForms`, три непустые строки.
-- `byAudience`: ровно три ключа `Audience`, `address` из `'ты' | 'вы'`.
+- `byAudience`: ровно три ключа `Audience`, `address` из `'ты' | 'вы'`, `label` непустой текст.
+- `entry`, `unknown`: все поля непустой текст.
 
 Дефолты, если поле не указано: `registry` → `null`, `registry.photos` и `venue.photos` → `[]`, `timeline` → `[]`, `dressCode.palette` → `[]`, `gifts` → `null`, `transfer` → `null`, `contacts` → `[]`, `menu.multiSelect` → `false`. Property-тест: снятие любого набора полей с дефолтом даёт ровно дефолт и не меняет остальное, `parseContent` идемпотентен на своём выходе.
 
