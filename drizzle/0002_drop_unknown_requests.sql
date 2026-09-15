@@ -1,0 +1,1 @@
+DROP TABLE "unknown_requests" CASCADE;
