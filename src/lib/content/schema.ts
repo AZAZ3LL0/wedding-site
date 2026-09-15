@@ -152,14 +152,16 @@ export const contentSchema = z.strictObject({
 	entry: z.strictObject({
 		eyebrow: text,
 		title: text,
-		nameLabel: text,
-		namePlaceholder: text,
+		text,
+		firstNameLabel: text,
+		lastNameLabel: text,
 		submit: text,
-		nameRequired: text,
-		notFound: text,
-		chooseTitle: text,
-		chooseText: text,
-		notListed: text
+		firstNameRequired: text,
+		lastNameRequired: text,
+		knownTitle: text,
+		knownText: text,
+		knownNew: text,
+		failed: text
 	}),
 	unknown: z.strictObject({
 		title: text,
