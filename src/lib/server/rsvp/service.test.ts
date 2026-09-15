@@ -6,7 +6,9 @@ import { rsvpPayloadSchema, type RsvpPayload } from '$lib/types';
 import { showsRegistry } from '$lib/server/guests/segment';
 import {
 	checkRsvp,
+	isRsvpOpen,
 	normalizeTelegramUsername,
+	rsvpClosesAt,
 	type RulesContent,
 	type RulesGuest
 } from './service';
@@ -284,6 +286,48 @@ describe('checkRsvp: forced values', () => {
 			ok: true,
 			value: { answer: { allergies: null, comment: null } }
 		});
+	});
+});
+
+describe('rsvp deadline', () => {
+	const offsetArb = fc
+		.record({
+			sign: fc.constantFrom('+', '-'),
+			hours: fc.integer({ min: 0, max: 14 }),
+			minutes: fc.constantFrom(0, 30, 45)
+		})
+		.map(
+			({ sign, hours, minutes }) =>
+				`${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+		);
+	const dateArb = fc
+		.date({
+			min: new Date('2026-01-01T00:00:00Z'),
+			max: new Date('2027-12-31T00:00:00Z'),
+			noInvalidDate: true
+		})
+		.map((d) => d.toISOString().slice(0, 10));
+
+	it('stays open until the midnight that ends the deadline day at the venue', () => {
+		fc.assert(
+			fc.property(dateArb, offsetArb, (rsvpDeadline, utcOffset) => {
+				const event = { rsvpDeadline, utcOffset };
+				const closesAt = rsvpClosesAt(event).getTime();
+				const dayStart = new Date(`${rsvpDeadline}T00:00:00${utcOffset}`).getTime();
+
+				expect(closesAt - dayStart).toBe(24 * 60 * 60 * 1000);
+				expect(isRsvpOpen(event, new Date(dayStart))).toBe(true);
+				expect(isRsvpOpen(event, new Date(closesAt - 1))).toBe(true);
+				expect(isRsvpOpen(event, new Date(closesAt))).toBe(false);
+				expect(isRsvpOpen(event, new Date(closesAt + 1))).toBe(false);
+			})
+		);
+	});
+
+	it('closes this event at 14 November 24:00 in Astrakhan, which is 20:00 UTC', () => {
+		expect(rsvpClosesAt({ rsvpDeadline: '2026-11-14', utcOffset: '+04:00' }).toISOString()).toBe(
+			'2026-11-14T20:00:00.000Z'
+		);
 	});
 });
 

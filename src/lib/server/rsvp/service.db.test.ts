@@ -8,14 +8,15 @@ import { guests, parties, rsvps } from '$lib/server/db/schema';
 import { nameKey } from '$lib/server/guests/name-key';
 import { rsvpPayloadSchema, type RsvpPayload } from '$lib/types';
 import { findCompanion } from './repo';
-import { submitRsvp, type RulesContent } from './service';
+import { rsvpClosesAt, submitRsvp, type SubmitContent } from './service';
 
 const { db, close } = createDb(inject('databaseUrl'));
 afterAll(() => close());
 
 const base = parseContent(raw);
 
-const content: RulesContent = {
+const content: SubmitContent = {
+	event: base.event,
 	menu: {
 		multiSelect: false,
 		courses: [
@@ -66,8 +67,11 @@ async function newGuest(options: PartyOptions = {}) {
 const payload = (overrides: Partial<RsvpPayload> = {}) =>
 	rsvpPayloadSchema.parse({ attending: 'yes', ...overrides });
 
+// A fixed moment before the deadline, so the suite does not start failing in November.
+const open = new Date('2026-10-01T12:00:00+04:00');
+
 const submit = (guestId: string, p: RsvpPayload) =>
-	submitRsvp(db, guestId, p, { content, source: 'web' });
+	submitRsvp(db, guestId, p, { content, source: 'web', now: open });
 
 const rowsOf = (guestId: string) => db.select().from(rsvps).where(eq(rsvps.guestId, guestId));
 
@@ -156,6 +160,26 @@ describe('submitRsvp', () => {
 
 		expect(results.map((r) => r.kind === 'saved' && r.created).sort()).toEqual([false, true]);
 		expect(await rowsOf(guestId)).toHaveLength(1);
+	});
+
+	it('refuses an answer once the deadline day is over and keeps the saved one', async () => {
+		const guestId = await newGuest();
+		const closesAt = rsvpClosesAt(content.event);
+		const before = new Date(closesAt.getTime() - 1);
+
+		await expect(
+			submitRsvp(db, guestId, payload({ drinks: ['tea'] }), { content, source: 'web', now: before })
+		).resolves.toMatchObject({ kind: 'saved' });
+		await expect(
+			submitRsvp(db, guestId, payload({ attending: 'no' }), {
+				content,
+				source: 'web',
+				now: closesAt
+			})
+		).resolves.toEqual({ kind: 'closed' });
+
+		const [row] = await rowsOf(guestId);
+		expect(row).toMatchObject({ attending: 'yes', drinks: ['tea'] });
 	});
 
 	it('reports a guest that no longer exists', async () => {
