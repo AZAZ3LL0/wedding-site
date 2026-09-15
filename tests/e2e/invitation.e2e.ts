@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { content } from '../../src/lib/content/wedding';
+import { signIn } from './guest';
 
 // These checks are about the card, not the envelope that covers it on a first visit.
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, context, baseURL }) => {
+	await signIn(context, baseURL!);
 	await page.addInitScript(() => sessionStorage.setItem('envelope-opened', '1'));
 });
 
@@ -41,6 +43,8 @@ test.describe('performance', () => {
 	}) => {
 		// A first visit, so the envelope is the screen being measured.
 		const context = await browser.newContext(test.info().project.use);
+		const baseURL = test.info().project.use.baseURL!;
+		await signIn(context, baseURL);
 		const page = await context.newPage();
 		const cdp = await page.context().newCDPSession(page);
 		await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
@@ -52,7 +56,7 @@ test.describe('performance', () => {
 			uploadThroughput: (750 * 1024) / 8
 		});
 
-		await page.goto(`${test.info().project.use.baseURL}/i`, { waitUntil: 'load' });
+		await page.goto(`${baseURL}/i`, { waitUntil: 'load' });
 		const lcp = await page.evaluate(
 			() =>
 				new Promise<number>((resolve) => {

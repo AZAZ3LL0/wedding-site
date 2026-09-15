@@ -1,5 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { content } from '../../src/lib/content/wedding';
+import { signIn } from './guest';
+
+test.beforeEach(({ context, baseURL }) => signIn(context, baseURL!));
 
 const envelope = (page: Page) => page.getByRole('dialog');
 // Main content and footer share one wrapper that goes inert under the envelope.
@@ -58,9 +61,11 @@ test('stays open when the guest reloads the same tab, and returns in a new one',
 	await expect(page.locator('html')).toHaveClass(/envelope-opened/);
 	await expect(envelope(page)).toBeHidden();
 
+	const baseURL = test.info().project.use.baseURL!;
 	const other = await context.browser()!.newContext();
+	await signIn(other, baseURL);
 	const fresh = await other.newPage();
-	await fresh.goto(`${test.info().project.use.baseURL}/i`);
+	await fresh.goto(`${baseURL}/i`);
 	await expect(envelope(fresh)).toBeVisible();
 	await other.close();
 });
