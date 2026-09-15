@@ -20,7 +20,7 @@
 
 		<div class="card">
 			<div class="frame">
-				<p class="eyebrow">{cover.eyebrow}</p>
+				<p class="eyebrow text-olive">{cover.eyebrow}</p>
 				<div class="text-wine">
 					<Heading level={1} script>{cover.title}</Heading>
 				</div>

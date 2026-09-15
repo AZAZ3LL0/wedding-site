@@ -102,12 +102,11 @@
 	}
 }
 
-/* Small caps line above a heading: «Кыз Узату», «Место». Olive keeps 4.8:1 on paper. */
+/* Small caps line above a heading: «Кыз Узату», «Место». Color comes from the context. */
 @utility eyebrow {
 	font-family: var(--font-display);
 	font-weight: 500;
 	font-size: 0.8125rem;
 	letter-spacing: 0.22em;
 	text-transform: uppercase;
-	color: var(--c-olive);
 }
