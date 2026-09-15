@@ -3,6 +3,7 @@
 	import Cover from './Cover.svelte';
 	import Envelope from './Envelope.svelte';
 	import Invitation from './Invitation.svelte';
+	import Location from './Location.svelte';
 
 	let { data } = $props();
 
@@ -30,4 +31,10 @@
 <main tabindex="-1" inert={covering} bind:this={main} class="outline-none">
 	<Cover cover={content.cover} date={content.event.date} />
 	<Invitation invitation={content.invitation} event={content.event} labels={content.ui.countdown} />
+	<Location
+		registry={content.registry}
+		venue={content.venue}
+		labels={content.sections.location}
+		linkLabel={content.ui.map.open}
+	/>
 </main>
