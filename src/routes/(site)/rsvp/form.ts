@@ -26,7 +26,8 @@ export type FormError =
 	| 'companionNotAttending'
 	| 'unknownOption'
 	| 'invalid'
-	| 'failed';
+	| 'failed'
+	| 'closed';
 
 export function valuesOf(
 	rsvp: RsvpPublic | null,
