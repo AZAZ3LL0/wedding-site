@@ -87,6 +87,7 @@ describe('parseContent', () => {
 		['unknown request copy without a submit label', without(['unknown', 'submit'])],
 		['rsvp copy without the closed notice', without(['rsvp', 'closed'])],
 		['a blank rsvp submit label', withValue(['rsvp', 'submit'], '  ')],
+		['thanks copy without the edit link', without(['thanks', 'edit'])],
 		['an unknown form of address', withValue(['byAudience', 'family', 'address'], 'Вы')],
 		['a music path from the page', withValue(['music', 'src'], 'audio/track.mp3')]
 	])('rejects %s', (_, raw) => {
