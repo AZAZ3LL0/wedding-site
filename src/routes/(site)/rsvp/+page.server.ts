@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { getContent } from '$lib/server/content';
 import { getDb } from '$lib/server/db';
-import { findTelegramUsername } from '$lib/server/rsvp/repo';
+import { findCompanion, findTelegramUsername } from '$lib/server/rsvp/repo';
 import { submitRsvp } from '$lib/server/rsvp/service';
 import type { Actions, PageServerLoad } from './$types';
 import { errorOf, readForm, toPayload, valuesOf, type FormError, type FormValues } from './form';
@@ -12,10 +12,17 @@ const failure = (status: number, error: FormError, values: FormValues) =>
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.guest) redirect(303, '/');
-	const { rsvp, id } = locals.guest;
+	const { rsvp, id, plusOnePolicy } = locals.guest;
+	const plusOneAllowed = plusOnePolicy === 'allowed';
+	const db = getDb();
+	const [telegramUsername, companion] = await Promise.all([
+		findTelegramUsername(db, id),
+		plusOneAllowed ? findCompanion(db, id) : null
+	]);
 	return {
 		answered: rsvp !== null,
-		values: valuesOf(rsvp, await findTelegramUsername(getDb(), id))
+		plusOneAllowed,
+		values: valuesOf(rsvp, telegramUsername, companion)
 	};
 };
 
