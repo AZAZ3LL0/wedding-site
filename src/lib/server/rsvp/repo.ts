@@ -1,7 +1,9 @@
+import { randomBytes } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import type { Db } from '$lib/server/db';
 import { guests, parties, rsvps } from '$lib/server/db/schema';
-import type { GuestPublic } from '$lib/types';
+import { nameKey } from '$lib/server/guests/name-key';
+import type { GuestPublic, RsvpPayload } from '$lib/types';
 
 export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
@@ -9,6 +11,8 @@ export type LockedGuest = Pick<
 	GuestPublic,
 	'id' | 'displayName' | 'audience' | 'invitedToRegistry' | 'plusOnePolicy'
 > & { partyId: string };
+
+export type Companion = NonNullable<RsvpPayload['companion']>;
 
 export type RsvpRow = Omit<
 	typeof rsvps.$inferInsert,
@@ -75,4 +79,65 @@ export async function findTelegramUsername(db: Db, guestId: string): Promise<str
 		.from(guests)
 		.where(eq(guests.id, guestId));
 	return row?.telegramUsername ?? null;
+}
+
+/**
+ * Creates or renames the one companion of `inviter` (tech.md §4, invariants 1 and 2). Callers
+ * hold the inviter lock, so looking the companion up first cannot race another insert.
+ */
+export async function upsertCompanion(
+	tx: Tx,
+	inviter: Pick<LockedGuest, 'id' | 'partyId'>,
+	companion: Pick<Companion, 'firstName' | 'lastName'>
+): Promise<string> {
+	const names = {
+		firstName: companion.firstName,
+		lastName: companion.lastName,
+		displayName: companion.firstName,
+		nameKey: nameKey(`${companion.firstName} ${companion.lastName}`)
+	};
+	const [existing] = await tx
+		.select({ id: guests.id })
+		.from(guests)
+		.where(eq(guests.invitedByGuestId, inviter.id));
+	if (existing) {
+		await tx
+			.update(guests)
+			.set({ ...names, partyId: inviter.partyId, isPlusOne: true })
+			.where(eq(guests.id, existing.id));
+		return existing.id;
+	}
+
+	const [created] = await tx
+		.insert(guests)
+		.values({
+			...names,
+			partyId: inviter.partyId,
+			isPlusOne: true,
+			invitedByGuestId: inviter.id,
+			// The companion never signs in with it, but the column is required and unique.
+			botToken: randomBytes(32).toString('base64url')
+		})
+		.returning({ id: guests.id });
+	return created!.id;
+}
+
+// Removes the companion row; its RSVP and sessions go with it through ON DELETE CASCADE.
+export async function deleteCompanion(tx: Tx, inviterId: string): Promise<void> {
+	await tx.delete(guests).where(eq(guests.invitedByGuestId, inviterId));
+}
+
+export async function findCompanion(db: Db, inviterId: string): Promise<Companion | null> {
+	const [row] = await db
+		.select({
+			firstName: guests.firstName,
+			lastName: guests.lastName,
+			mainCourses: rsvps.mainCourses,
+			drinks: rsvps.drinks
+		})
+		.from(guests)
+		.leftJoin(rsvps, eq(rsvps.guestId, guests.id))
+		.where(eq(guests.invitedByGuestId, inviterId));
+	if (!row) return null;
+	return { ...row, mainCourses: row.mainCourses ?? [], drinks: row.drinks ?? [] };
 }
