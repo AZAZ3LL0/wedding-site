@@ -1,0 +1,63 @@
+import { expect, test } from '@playwright/test';
+import { content } from '../../src/lib/content/wedding';
+
+test('invitation card shows the event from the content config', async ({ page }) => {
+	await page.goto('/i');
+
+	const card = page.locator('header');
+	await expect(card.getByRole('heading', { level: 1 })).toHaveText(content.cover.title);
+	await expect(card.getByText(content.cover.eyebrow)).toBeVisible();
+	await expect(card.getByText(content.cover.text)).toBeVisible();
+	await expect(card.getByRole('img', { name: content.cover.photo.alt })).toBeVisible();
+	await expect(card.locator(`time[datetime="${content.event.date}"]`)).toHaveText('28 | 11 | 2026');
+
+	await expect(page.getByText(content.invitation.text)).toBeVisible();
+	await expect(page.getByText(content.invitation.dateLine)).toBeVisible();
+	// The countdown aims at the local start in Astrakhan, not at the guest's time zone.
+	await expect(page.locator('time[datetime="2026-11-28T17:00:00+04:00"]')).toBeVisible();
+});
+
+test('sound is off until the guest turns it on', async ({ page }) => {
+	await page.goto('/i');
+	const toggle = page.getByRole('button', { name: content.ui.audio.play });
+	const audio = page.locator('audio');
+
+	await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+	await expect(audio).not.toHaveAttribute('autoplay');
+	await expect(audio).toHaveAttribute('preload', 'none');
+	await page.waitForLoadState('load');
+	expect(await audio.evaluate((el: HTMLAudioElement) => el.paused)).toBe(true);
+});
+
+test.describe('performance', () => {
+	// Lighthouse's mobile profile: 4x slower CPU, 150 ms RTT, 1.6 Mbps down, 750 kbps up.
+	test('first screen paints its largest element within 2.5 s on a throttled phone', async ({
+		page
+	}) => {
+		const cdp = await page.context().newCDPSession(page);
+		await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+		await cdp.send('Network.enable');
+		await cdp.send('Network.emulateNetworkConditions', {
+			offline: false,
+			latency: 150,
+			downloadThroughput: (1.6 * 1024 * 1024) / 8,
+			uploadThroughput: (750 * 1024) / 8
+		});
+
+		await page.goto('/i', { waitUntil: 'load' });
+		const lcp = await page.evaluate(
+			() =>
+				new Promise<number>((resolve) => {
+					let latest = 0;
+					new PerformanceObserver((list) => {
+						for (const entry of list.getEntries()) latest = entry.startTime;
+					}).observe({ type: 'largest-contentful-paint', buffered: true });
+					// Fonts swap after load; give the last candidate time to report.
+					setTimeout(() => resolve(latest), 1500);
+				})
+		);
+
+		expect(lcp).toBeGreaterThan(0);
+		expect(lcp).toBeLessThan(2500);
+	});
+});
