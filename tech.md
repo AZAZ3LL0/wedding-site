@@ -1,6 +1,6 @@
 # tech.md
 
-**Версия ядра: v6**
+**Версия ядра: v7**
 
 Changelog:
 
@@ -10,6 +10,7 @@ Changelog:
 - v4: UI-подписи примитивов приходят пропсами из блока `content.ui`, тип `PluralForms`, уточнены пропсы `Reveal`, `Countdown`, `Collage`, `MapCard`, `AudioToggle`, `Field` и проброс HTML-атрибутов у контролов. Разделы 6, 7, 8.
 - v5: дизайн публичного сайта «конверт с открыткой» для Кыз Узату в Астрахани. Полная схема контента с форматами и дефолтами, `event.utcOffset`, блоки `envelope`, `cover`, `invitation`, `sections`, `registry: null`, парсинг контента на сервере и передача через `load`. Палитра токенов олива, бордо, крем, `--font-body` на Cormorant Garamond. Правила конверта. Роадмап стадии 1 без мудборда, галереи, тайминга, подарков и контактов на сайте. ЗАГС в БД и RSVP не меняются. Разделы 3, 7, 8, 13.
 - v6: идентификация гостя. Блоки контента `entry` и `unknown`, поле `byAudience.*.label` для подсказки тёзкам. Топик `unknown.notify-admin` и схема `unknownNotifyAdminJobSchema`. Правила сессии гостя, выбора тёзки и видимости блока ЗАГСа, `guests/segment.ts`. Разделы 3, 5, 6, 7.
+- v7: ответ гостя. Блоки контента `rsvp` и `thanks`. Payload `rsvp.notify-admin` получил `updatedAt`, схема `rsvpNotifyAdminJobSchema`. Правила дедлайна, ответа «не приду», трансфера, `menu.multiSelect`, `telegramUsername`, спутника и сериализации записи. Разделы 5, 6, 7.
 
 Правила изменения файла: только append-only, любое изменение контракта (схема БД, типы в `lib/types`, payload джоба, схема контента) бампает версию и добавляет строку в changelog. Сессия не правит этот файл самостоятельно: при нехватке контракта выдаёт блок `CONTRACT GAP` и ждёт решения.
 
@@ -280,10 +281,15 @@ type ReminderSendJob = { guestId: string; stage: 'd30' | 'd7' };
 ### `rsvp.notify-admin`
 
 ```ts
-type RsvpNotifyAdminJob = { guestId: string; kind: 'created' | 'updated' };
+type RsvpNotifyAdminJob = { guestId: string; kind: 'created' | 'updated'; updatedAt: string };  // ISO rsvps.updated_at
 ```
 
-Отправляет организатору сообщение в Telegram о новом или изменённом ответе. `singletonKey = `${guestId}:${kind}:${updatedAtIso}``, `retryLimit: 3`. Идемпотентность через квитанцию `job_receipts`.
+Отправляет организатору сообщение в Telegram о новом или изменённом ответе. Ставится action формы RSVP после записи, только для гостя, не для спутника.
+
+- `singletonKey = `${guestId}:${kind}:${updatedAt}``, `retryLimit: 3`, `retryBackoff: true`.
+- Идемпотентность через квитанцию `rsvp.notify-admin:<singletonKey>`.
+- Текст из `telegram/templates.ts`: имя гостя, ответ, ЗАГС, блюда и напитки подписями из `content.menu`, аллергии, трансфер, комментарий, `telegramUsername`, спутник с его блюдами и напитками. Данные берутся из БД на момент отправки.
+- Гостя или его RSVP нет в БД: хендлер выходит успешно без отправки. Ошибка очереди или Telegram не отменяет записанный ответ, гость видит успех.
 
 ### `unknown.notify-admin`
 
@@ -408,13 +414,38 @@ export type DemoPingJob = z.infer<typeof demoPingJobSchema>;
 
 export const unknownNotifyAdminJobSchema = z.object({ requestId: z.uuid() });
 export type UnknownNotifyAdminJob = z.infer<typeof unknownNotifyAdminJobSchema>;
+
+export const rsvpNotifyAdminJobSchema = z.object({
+  guestId: z.uuid(),
+  kind: z.enum(['created', 'updated']),
+  updatedAt: z.iso.datetime({ offset: true })
+});
+export type RsvpNotifyAdminJob = z.infer<typeof rsvpNotifyAdminJobSchema>;
 ```
 
 Серверные правила поверх схемы (валидировать в `rsvp/service.ts`, не в zod):
 
 - `companion` отвергается, если `plusOnePolicy = 'none'` или `attending = 'no'`.
-- `attendingRegistry` принудительно `false`, если у party нет приглашения в ЗАГС.
+- `attendingRegistry` принудительно `false`, если у party нет приглашения в ЗАГС. Проверка идёт через `showsRegistry` из `guests/segment.ts`, тот же признак скрывает поле в форме.
 - `mainCourses` и `drinks` проверяются против id из контент-конфига, неизвестный id отвергается.
+- `menu.multiSelect = false`: больше одного id в `mainCourses` отвергается, у спутника тоже. Повтор id внутри `mainCourses` или `drinks` отвергается.
+- `attending = 'no'`: `attendingRegistry` и `needsTransfer` становятся `false`, `mainCourses` и `drinks` пустыми, `allergies` равно `null`. `comment`, `songRequest` и `telegramUsername` сохраняются.
+- `needsTransfer` принудительно `false`, если `content.transfer === null`. Поле трансфера в форме тогда скрыто.
+- `telegramUsername`: обрезать пробелы и ведущий `@`, пустая строка становится `null`. Значение пишется в `guests.telegram_username` гостя.
+
+### Ответ гостя
+
+- `/rsvp` и `/thanks` без гостя перенаправляют на `/`. `/i` ведёт на `/rsvp` ссылкой `rsvp.cta`, гостя с ответом на `/thanks` ссылкой `rsvp.ctaAnswered`.
+- `load` формы берёт через `rsvp/repo.ts` текущий ответ, `telegramUsername` гостя и спутника (`firstName`, `lastName`, `mainCourses`, `drinks`). `botToken` и `telegramChatId` в браузер не уходят.
+- Приём ответов открыт, пока текущий момент раньше полуночи, которая завершает день `event.rsvpDeadline` по `event.utcOffset`. После дедлайна action отвергает запись, `/rsvp` показывает `rsvp.closed`, гость с ответом попадает на `/thanks`, ссылки `thanks.edit` нет.
+- Успешная запись ведёт на `/thanks`: итог ответа гостя и спутника, ссылка `thanks.edit` на `/rsvp` до дедлайна. `/thanks` без ответа ведёт на `/rsvp`.
+
+### Спутник
+
+- `companion` при `attending = 'yes'` создаёт или обновляет единственного спутника гостя: guest в party пригласившего, `isPlusOne = true`, `invitedByGuestId`, `displayName = firstName`, `nameKey` от имени и фамилии, `botToken` из 32 случайных байт в base64url. RSVP спутника: `attending = 'yes'`, его `mainCourses` и `drinks`, остальные поля по умолчанию, `source` как у ответа гостя.
+- `companion = null` или `attending = 'no'` удаляет спутника вместе с его RSVP.
+- Ответ гостя, спутник и RSVP спутника пишутся в одной транзакции, которая начинается с `SELECT ... FOR UPDATE` строки гостя. Параллельные отправки одного гостя идут по очереди и не создают второго спутника.
+- После записи ставится `rsvp.notify-admin`: `kind = 'created'`, если RSVP гостя вставлен этой записью, иначе `'updated'`.
 
 ### Нормализация имени
 
@@ -553,6 +584,56 @@ export const content = {
     sent: 'Спасибо! Мы получили заявку и скоро свяжемся с вами',
     failed: 'Не получилось отправить. Попробуйте ещё раз'
   },
+  // Форма ответа на `/rsvp` и ссылка на неё с `/i`, см. раздел 6.
+  rsvp: {
+    cta: 'Ответить на приглашение',
+    ctaAnswered: 'Посмотреть ответ',
+    eyebrow: 'Ответ на приглашение',
+    title: 'Будете с нами?',
+    deadline: 'Просим ответить до 14 ноября',   // TODO: вместе с event.rsvpDeadline
+    attendingLabel: 'Ваш ответ',
+    attendingYes: 'С радостью приду',
+    attendingNo: 'К сожалению, не смогу',
+    registryLabel: 'ЗАГС',
+    registryOption: 'Буду на церемонии в ЗАГСе',
+    coursesLabel: 'Горячее',
+    drinksLabel: 'Напитки',
+    allergiesLabel: 'Аллергии и ограничения в еде',
+    allergiesPlaceholder: 'Например, не ем орехи',
+    transferLabel: 'Трансфер',
+    transferOption: 'Нужен трансфер',
+    companionLabel: 'Спутник',
+    companionOption: 'Приду со спутником',
+    companionFirstName: 'Имя спутника',
+    companionLastName: 'Фамилия спутника',
+    companionCourses: 'Горячее для спутника',
+    companionDrinks: 'Напитки для спутника',
+    commentLabel: 'Комментарий',
+    commentPlaceholder: 'Всё, что нам стоит знать',
+    telegramLabel: 'Telegram',
+    telegramPlaceholder: '@username',
+    telegramHint: 'Пришлём ссылку на бота, который напомнит о празднике',
+    submit: 'Отправить ответ',
+    save: 'Сохранить ответ',
+    attendingRequired: 'Выберите, придёте ли вы',
+    companionNameRequired: 'Укажите имя спутника',
+    companionNotAttending: 'Спутника можно добавить, только если вы придёте',
+    unknownOption: 'Этого варианта уже нет в меню, выберите заново',
+    invalid: 'Проверьте ответ и отправьте ещё раз',
+    failed: 'Не получилось сохранить ответ. Попробуйте ещё раз',
+    closed: 'Приём ответов завершён. Если планы изменились, свяжитесь с нами'
+  },
+  // Итог ответа на `/thanks`. Подписи строк итога берутся из `rsvp`.
+  thanks: {
+    eyebrow: 'Ответ получен',
+    titleYes: 'Спасибо, ждём вас!',
+    titleNo: 'Спасибо, что ответили',
+    summaryTitle: 'Ваш ответ',
+    companionTitle: 'Спутник',
+    empty: 'не указано',
+    edit: 'Изменить ответ',
+    back: 'Вернуться к приглашению'
+  },
   // Подписи UI-примитивов. Слайс передаёт их примитиву пропсами, см. раздел 8.
   ui: {
     countdown: {
@@ -591,7 +672,7 @@ export const content = {
 - `music.src`: путь от корня.
 - `ui.countdown.*`: `PluralForms`, три непустые строки.
 - `byAudience`: ровно три ключа `Audience`, `address` из `'ты' | 'вы'`, `label` непустой текст.
-- `entry`, `unknown`: все поля непустой текст.
+- `entry`, `unknown`, `rsvp`, `thanks`: все поля непустой текст.
 
 Дефолты, если поле не указано: `registry` → `null`, `registry.photos` и `venue.photos` → `[]`, `timeline` → `[]`, `dressCode.palette` → `[]`, `gifts` → `null`, `transfer` → `null`, `contacts` → `[]`, `menu.multiSelect` → `false`. Property-тест: снятие любого набора полей с дефолтом даёт ровно дефолт и не меняет остальное, `parseContent` идемпотентен на своём выходе.
 
