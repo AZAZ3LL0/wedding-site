@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { getContent } from '$lib/server/content';
 import { getDb } from '$lib/server/db';
 import { findCompanion, findTelegramUsername } from '$lib/server/rsvp/repo';
-import { submitRsvp } from '$lib/server/rsvp/service';
+import { isRsvpOpen, submitRsvp } from '$lib/server/rsvp/service';
 import type { Actions, PageServerLoad } from './$types';
 import { errorOf, readForm, toPayload, valuesOf, type FormError, type FormValues } from './form';
 
@@ -13,6 +13,10 @@ const failure = (status: number, error: FormError, values: FormValues) =>
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.guest) redirect(303, '/');
 	const { rsvp, id, plusOnePolicy } = locals.guest;
+	// After the deadline an answer can only be read, and that is what /thanks shows.
+	const open = isRsvpOpen(getContent().event, new Date());
+	if (!open && rsvp) redirect(303, '/thanks');
+
 	const plusOneAllowed = plusOnePolicy === 'allowed';
 	const db = getDb();
 	const [telegramUsername, companion] = await Promise.all([
@@ -20,6 +24,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		plusOneAllowed ? findCompanion(db, id) : null
 	]);
 	return {
+		open,
 		answered: rsvp !== null,
 		plusOneAllowed,
 		values: valuesOf(rsvp, telegramUsername, companion)
@@ -46,7 +51,8 @@ export const actions: Actions = {
 		}
 
 		if (result.kind === 'missing') redirect(303, '/');
+		if (result.kind === 'closed') return failure(403, 'closed', values);
 		if (result.kind === 'rejected') return failure(400, errorOf(result.reason), values);
-		redirect(303, '/i');
+		redirect(303, '/thanks');
 	}
 };
