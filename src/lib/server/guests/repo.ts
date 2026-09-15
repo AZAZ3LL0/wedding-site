@@ -1,6 +1,6 @@
 import { and, asc, eq, gt } from 'drizzle-orm';
 import type { Db } from '$lib/server/db';
-import { guestSessions, guests, parties, rsvps } from '$lib/server/db/schema';
+import { guestSessions, guests, parties, rsvps, unknownRequests } from '$lib/server/db/schema';
 import type { GuestPublic } from '$lib/types';
 import type { MatchCandidate } from './match';
 
@@ -86,4 +86,26 @@ export async function findSessionGuestId(db: Db, id: string, now: Date): Promise
 		.from(guestSessions)
 		.where(and(eq(guestSessions.id, id), gt(guestSessions.expiresAt, now)));
 	return row?.guestId ?? null;
+}
+
+export async function insertUnknownRequest(
+	db: Db,
+	request: { rawName: string; contact: string | null }
+): Promise<string> {
+	const [row] = await db
+		.insert(unknownRequests)
+		.values(request)
+		.returning({ id: unknownRequests.id });
+	return row!.id;
+}
+
+export async function findUnknownRequest(
+	db: Db,
+	id: string
+): Promise<{ rawName: string; contact: string | null } | null> {
+	const [row] = await db
+		.select({ rawName: unknownRequests.rawName, contact: unknownRequests.contact })
+		.from(unknownRequests)
+		.where(eq(unknownRequests.id, id));
+	return row ?? null;
 }

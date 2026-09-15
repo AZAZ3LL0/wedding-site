@@ -64,3 +64,6 @@ export type MatchResult =
 // Job payloads, see tech.md §5. Handlers validate their input with these schemas.
 export const demoPingJobSchema = z.object({ pingId: z.uuid() });
 export type DemoPingJob = z.infer<typeof demoPingJobSchema>;
+
+export const unknownNotifyAdminJobSchema = z.object({ requestId: z.uuid() });
+export type UnknownNotifyAdminJob = z.infer<typeof unknownNotifyAdminJobSchema>;
