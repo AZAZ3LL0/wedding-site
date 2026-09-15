@@ -1,23 +1,8 @@
 import { animate } from 'motion/mini';
 import type { Action } from 'svelte/action';
+import { motionTokens } from './motion-tokens';
 
 export type RevealOptions = { delay?: number; y?: number };
-
-function token(name: string): string {
-	return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
-type Bezier = [number, number, number, number];
-
-// Reads motion tokens from app.css so JS animations match the CSS ones.
-function motionTokens(): { duration: number; ease: Bezier } {
-	const duration = Number.parseFloat(token('--dur-slow')) / 1000 || 0.7;
-	const points = token('--ease-out')
-		.match(/-?\d*\.?\d+/g)
-		?.map(Number);
-	const ease: Bezier = points?.length === 4 ? (points as Bezier) : [0.22, 1, 0.36, 1];
-	return { duration, ease };
-}
 
 /**
  * Fades an element in when it scrolls into view. Content stays visible without JS: app.css hides
