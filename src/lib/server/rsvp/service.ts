@@ -130,6 +130,19 @@ export function checkRsvp(
 
 export type RsvpSource = 'web' | 'bot';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+type Deadline = Pick<ContentData['event'], 'rsvpDeadline' | 'utcOffset'>;
+
+// Answers are taken through the whole deadline day at the venue, not in the guest's time zone.
+export function rsvpClosesAt({ rsvpDeadline, utcOffset }: Deadline): Date {
+	return new Date(new Date(`${rsvpDeadline}T00:00:00${utcOffset}`).getTime() + DAY_MS);
+}
+
+export function isRsvpOpen(event: Deadline, now: Date): boolean {
+	return now.getTime() < rsvpClosesAt(event).getTime();
+}
+
 // A companion comes by definition and only picks a menu; the rest stays at the column defaults.
 export function companionAnswer(companion: Companion): RsvpAnswer {
 	return {
@@ -144,9 +157,12 @@ export function companionAnswer(companion: Companion): RsvpAnswer {
 	};
 }
 
+export type SubmitContent = RulesContent & Pick<ContentData, 'event'>;
+
 export type SubmitResult =
 	| { kind: 'saved'; created: boolean; updatedAt: string }
 	| { kind: 'rejected'; reason: RsvpRejection }
+	| { kind: 'closed' }
 	| { kind: 'missing' };
 
 // The only write path for an answer, shared by the web form and the bot (tech.md §6).
@@ -154,8 +170,10 @@ export async function submitRsvp(
 	db: Db,
 	guestId: string,
 	payload: RsvpPayload,
-	{ content, source }: { content: RulesContent; source: RsvpSource }
+	{ content, source, now = new Date() }: { content: SubmitContent; source: RsvpSource; now?: Date }
 ): Promise<SubmitResult> {
+	if (!isRsvpOpen(content.event, now)) return { kind: 'closed' };
+
 	return withLockedGuest(db, guestId, async (tx, guest) => {
 		if (!guest) return { kind: 'missing' };
 
