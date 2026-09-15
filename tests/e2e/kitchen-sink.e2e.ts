@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { sample } from '../../src/routes/kitchen-sink/fixtures';
+import { templates } from '../../src/lib/server/telegram/templates';
 
 // Every public primitive from tech.md §8.
 const primitives = [
@@ -127,9 +128,12 @@ test.describe('reveal', () => {
 
 test('telegram page shows the message sent by the demo job', async ({ page }) => {
 	await page.goto('/kitchen-sink/telegram');
-	const before = await page.locator('[data-message]').count();
+	// Other suites send messages in parallel, so count only the demo job's own.
+	const [demoPrefix] = templates.demoPing('\n').split('\n');
+	const pings = page.locator('[data-message]').filter({ hasText: demoPrefix });
+	const before = await pings.count();
 
 	await page.locator('form[action="?/ping"] button[type="submit"]').click();
 
-	await expect(page.locator('[data-message]')).toHaveCount(before + 1, { timeout: 15_000 });
+	await expect(pings).toHaveCount(before + 1, { timeout: 15_000 });
 });
