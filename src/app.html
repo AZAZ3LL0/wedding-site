@@ -8,6 +8,12 @@
 			// Lets CSS hide not-yet-revealed blocks only when JS runs; without JS content stays visible.
 			// If the app bundle never starts use:reveal, drop the class so nothing stays hidden.
 			document.documentElement.classList.add('js');
+			// Keep the envelope closed for guests who opened it earlier in this tab; storage may throw.
+			try {
+				if (sessionStorage.getItem('envelope-opened')) {
+					document.documentElement.classList.add('envelope-opened');
+				}
+			} catch (e) {}
 			setTimeout(function () {
 				if (!document.documentElement.hasAttribute('data-reveal-ready')) {
 					document.documentElement.classList.remove('js');

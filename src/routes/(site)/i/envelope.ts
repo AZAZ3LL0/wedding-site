@@ -1,0 +1,27 @@
+// Session storage key and <html> class. The inline script in src/app.html reads the same name
+// before the first paint, so a guest who already opened the envelope never sees it flash.
+export const ENVELOPE_OPENED = 'envelope-opened';
+
+export type Phase = { delay: number; duration: number };
+export type OpeningPlan = { seal: Phase; flap: Phase; card: Phase; fade: Phase };
+
+// Timings scale with --dur-slow so the envelope keeps pace with the rest of the site's motion.
+export function openingPlan(slow: number): OpeningPlan {
+	return {
+		seal: { delay: 0, duration: slow * 0.5 },
+		flap: { delay: slow * 0.35, duration: slow * 1.4 },
+		card: { delay: slow * 1.2, duration: slow * 1.3 },
+		fade: { delay: slow * 2.6, duration: slow * 0.8 }
+	};
+}
+
+export const end = ({ delay, duration }: Phase) => delay + duration;
+
+// Private mode and blocked storage throw; the envelope then simply shows again next visit.
+export function rememberOpened(storage: () => Pick<Storage, 'setItem'>): void {
+	try {
+		storage().setItem(ENVELOPE_OPENED, '1');
+	} catch {
+		// Nothing to recover: remembering is a convenience, not a requirement.
+	}
+}
