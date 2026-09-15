@@ -15,7 +15,7 @@
 <Section variant="light" aria-labelledby="invitation-title">
 	<Reveal>
 		<div class="mx-auto flex max-w-xl flex-col items-center gap-6 text-center">
-			<p class="eyebrow">{invitation.eyebrow}</p>
+			<p class="eyebrow text-olive">{invitation.eyebrow}</p>
 			<div id="invitation-title">
 				<Heading level={2} script>{invitation.title}</Heading>
 			</div>

@@ -320,7 +320,6 @@
 		pointer-events: none;
 	}
 
-	.text .eyebrow,
 	.open {
 		color: var(--c-ivory);
 	}
