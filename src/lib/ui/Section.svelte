@@ -14,7 +14,7 @@
 <section
 	{...rest}
 	class={[
-		variant === 'dark' ? 'bg-forest text-paper' : 'bg-paper text-ink',
+		variant === 'dark' ? 'bg-olive-deep text-ivory' : 'bg-paper text-ink',
 		padded && 'px-6 py-section',
 		className
 	]}
