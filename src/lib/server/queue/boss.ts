@@ -1,10 +1,17 @@
 import { PgBoss, type Job } from 'pg-boss';
 import { getConfig } from '$lib/server/config';
+import { getContent } from '$lib/server/content';
 import { getDb, type Db } from '$lib/server/db';
 import { getTelegramClient } from '$lib/server/telegram';
 import { TelegramError, type TelegramClient } from '$lib/server/telegram/client';
+import type { RsvpNotifyAdminJob } from '$lib/types';
 import { InvalidPayloadError } from './errors';
 import { DEMO_PING, handleDemoPing } from './jobs/demo-ping';
+import {
+	RSVP_NOTIFY_ADMIN,
+	handleRsvpNotifyAdmin,
+	rsvpNotifyAdminKey
+} from './jobs/rsvp-notify-admin';
 import { UNKNOWN_NOTIFY_ADMIN, handleUnknownNotifyAdmin } from './jobs/unknown-notify-admin';
 
 export type QueueDeps = {
@@ -21,6 +28,7 @@ export type Queue = {
 	boss: PgBoss;
 	sendDemoPing(pingId?: string): Promise<string | null>;
 	sendUnknownNotifyAdmin(requestId: string): Promise<string | null>;
+	sendRsvpNotifyAdmin(job: RsvpNotifyAdminJob): Promise<string | null>;
 	stop(): Promise<void>;
 };
 
@@ -46,6 +54,7 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 	// `stately` makes singletonKey reject a duplicate while the first job is queued or active.
 	await boss.createQueue(DEMO_PING, { ...retry, policy: 'stately' });
 	await boss.createQueue(UNKNOWN_NOTIFY_ADMIN, { ...retry, policy: 'stately' });
+	await boss.createQueue(RSVP_NOTIFY_ADMIN, { ...retry, policy: 'stately' });
 
 	const run = async (job: Job<unknown>, handler: () => Promise<unknown>) => {
 		try {
@@ -64,6 +73,11 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 	await boss.work<unknown>(UNKNOWN_NOTIFY_ADMIN, polling, async ([job]) => {
 		if (job) await run(job, () => handleUnknownNotifyAdmin(deps, job.data));
 	});
+	await boss.work<unknown>(RSVP_NOTIFY_ADMIN, polling, async ([job]) => {
+		if (job) {
+			await run(job, () => handleRsvpNotifyAdmin({ ...deps, menu: getContent().menu }, job.data));
+		}
+	});
 
 	return {
 		boss,
@@ -71,6 +85,8 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 			boss.send(DEMO_PING, { pingId }, { ...retry, singletonKey: pingId }),
 		sendUnknownNotifyAdmin: (requestId) =>
 			boss.send(UNKNOWN_NOTIFY_ADMIN, { requestId }, { ...retry, singletonKey: requestId }),
+		sendRsvpNotifyAdmin: (job) =>
+			boss.send(RSVP_NOTIFY_ADMIN, job, { ...retry, singletonKey: rsvpNotifyAdminKey(job) }),
 		stop: () => boss.stop({ graceful: true, timeout: 5_000 })
 	};
 }
