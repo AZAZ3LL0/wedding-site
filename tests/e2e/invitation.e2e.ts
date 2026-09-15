@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { content } from '../../src/lib/content/wedding';
 
+// These checks are about the card, not the envelope that covers it on a first visit.
+test.beforeEach(async ({ page }) => {
+	await page.addInitScript(() => sessionStorage.setItem('envelope-opened', '1'));
+});
+
 test('invitation card shows the event from the content config', async ({ page }) => {
 	await page.goto('/i');
 
@@ -32,8 +37,11 @@ test('sound is off until the guest turns it on', async ({ page }) => {
 test.describe('performance', () => {
 	// Lighthouse's mobile profile: 4x slower CPU, 150 ms RTT, 1.6 Mbps down, 750 kbps up.
 	test('first screen paints its largest element within 2.5 s on a throttled phone', async ({
-		page
+		browser
 	}) => {
+		// A first visit, so the envelope is the screen being measured.
+		const context = await browser.newContext(test.info().project.use);
+		const page = await context.newPage();
 		const cdp = await page.context().newCDPSession(page);
 		await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
 		await cdp.send('Network.enable');
@@ -44,7 +52,7 @@ test.describe('performance', () => {
 			uploadThroughput: (750 * 1024) / 8
 		});
 
-		await page.goto('/i', { waitUntil: 'load' });
+		await page.goto(`${test.info().project.use.baseURL}/i`, { waitUntil: 'load' });
 		const lcp = await page.evaluate(
 			() =>
 				new Promise<number>((resolve) => {
@@ -57,6 +65,7 @@ test.describe('performance', () => {
 				})
 		);
 
+		await context.close();
 		expect(lcp).toBeGreaterThan(0);
 		expect(lcp).toBeLessThan(2500);
 	});
