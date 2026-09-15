@@ -209,6 +209,16 @@ export const contentSchema = z.strictObject({
 		failed: text,
 		closed: text
 	}),
+	thanks: z.strictObject({
+		eyebrow: text,
+		titleYes: text,
+		titleNo: text,
+		summaryTitle: text,
+		companionTitle: text,
+		empty: text,
+		edit: text,
+		back: text
+	}),
 	ui: z.strictObject({
 		countdown: z.strictObject({
 			days: pluralForms,
