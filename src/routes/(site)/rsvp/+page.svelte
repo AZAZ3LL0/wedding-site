@@ -18,7 +18,12 @@
 	const menu = $derived(data.content.menu);
 	// A failed post shows what the guest typed, not the saved answer.
 	const values = $derived(form?.values ?? data.values);
-	const error = $derived(form?.error ? rsvp[form.error] : undefined);
+	// Errors that belong to one field show next to it instead of above the form.
+	const banner = $derived(
+		form?.error && form.error !== 'attendingRequired' && form.error !== 'companionNameRequired'
+			? rsvp[form.error]
+			: undefined
+	);
 
 	let pending = $state(false);
 </script>
@@ -50,8 +55,8 @@
 					};
 				}}
 			>
-				{#if error}
-					<Toast kind="error" text={error} />
+				{#if banner}
+					<Toast kind="error" text={banner} />
 				{/if}
 
 				<Field
@@ -143,6 +148,84 @@
 							{/snippet}
 						</Field>
 					{/if}
+
+					{#if data.plusOneAllowed}
+						<div class="companion flex flex-col gap-6">
+							<Field label={rsvp.companionLabel}>
+								{#snippet children(id)}
+									<CheckboxGroup
+										name="companion"
+										options={[{ id: 'yes', label: rsvp.companionOption }]}
+										values={values.companion ? ['yes'] : []}
+										aria-labelledby="{id}-label"
+									/>
+								{/snippet}
+							</Field>
+
+							<div class="companion-fields flex flex-col gap-6 border-l-2 border-olive/30 pl-5">
+								<Field
+									label={rsvp.companionFirstName}
+									error={form?.error === 'companionNameRequired'
+										? rsvp.companionNameRequired
+										: undefined}
+								>
+									{#snippet children(id)}
+										<TextInput
+											{id}
+											name="companionFirstName"
+											value={values.companionFirstName}
+											maxlength={60}
+											autocomplete="off"
+											aria-invalid={form?.error === 'companionNameRequired' ? 'true' : undefined}
+											aria-describedby={form?.error === 'companionNameRequired'
+												? `${id}-error`
+												: undefined}
+										/>
+									{/snippet}
+								</Field>
+								<Field label={rsvp.companionLastName}>
+									{#snippet children(id)}
+										<TextInput
+											{id}
+											name="companionLastName"
+											value={values.companionLastName}
+											maxlength={60}
+											autocomplete="off"
+										/>
+									{/snippet}
+								</Field>
+								<Field label={rsvp.companionCourses}>
+									{#snippet children(id)}
+										{#if menu.multiSelect}
+											<CheckboxGroup
+												name="companionCourses"
+												options={menu.courses}
+												values={values.companionCourses}
+												aria-labelledby="{id}-label"
+											/>
+										{:else}
+											<RadioGroup
+												name="companionCourses"
+												options={menu.courses}
+												value={values.companionCourses[0]}
+												aria-labelledby="{id}-label"
+											/>
+										{/if}
+									{/snippet}
+								</Field>
+								<Field label={rsvp.companionDrinks}>
+									{#snippet children(id)}
+										<CheckboxGroup
+											name="companionDrinks"
+											options={menu.drinks}
+											values={values.companionDrinks}
+											aria-labelledby="{id}-label"
+										/>
+									{/snippet}
+								</Field>
+							</div>
+						</div>
+					{/if}
 				</div>
 
 				<Field label={rsvp.commentLabel}>
@@ -184,6 +267,10 @@
 <style>
 	/* Pure CSS, so declining hides the menu with or without JavaScript. */
 	.rsvp:has(:global(input[name='attending'][value='no']:checked)) .details {
+		display: none;
+	}
+
+	.companion:not(:has(:global(input[name='companion']:checked))) .companion-fields {
 		display: none;
 	}
 </style>
