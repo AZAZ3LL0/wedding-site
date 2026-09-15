@@ -3,12 +3,13 @@ import { content } from '../../src/lib/content/wedding';
 
 const { entry, byAudience } = content;
 
-const nameInput = (page: Page) => page.getByLabel(entry.nameLabel);
+const nameInput = (page: Page) =>
+	page.getByRole('form', { name: entry.title }).getByLabel(entry.nameLabel);
 
 async function enterName(page: Page, name: string) {
 	await page.goto('/');
 	await nameInput(page).fill(name);
-	await page.getByRole('button', { name: entry.submit }).click();
+	await page.getByRole('form', { name: entry.title }).getByRole('button').click();
 }
 
 test('sends a visitor without a session from the invitation to the name form', async ({ page }) => {
