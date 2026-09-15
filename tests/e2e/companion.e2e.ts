@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { content } from '../../src/lib/content/wedding';
 import { signIn } from './guest';
 
-const { rsvp, menu } = content;
+const { rsvp, thanks, menu } = content;
 
 // Seed guest whose party allows a plus one; no other suite writes his answer.
 const INVITER = 'Алексей Петров';
@@ -25,7 +25,7 @@ async function answerWithCompanion(page: Page, firstName: string, lastName: stri
 		.getByLabel(menu.courses[0]!.label)
 		.check();
 	await submit(page).click();
-	await expect(page).toHaveURL('/i');
+	await expect(page).toHaveURL('/thanks');
 }
 
 test.describe.configure({ mode: 'serial' });
@@ -57,6 +57,10 @@ test.describe('a couple', () => {
 		await expect(companionName(page)).toBeVisible();
 
 		await answerWithCompanion(page, 'Ольга', 'Смирнова');
+		const companion = page.locator('[data-companion]');
+		await expect(companion).toContainText(thanks.companionTitle);
+		await expect(companion).toContainText('Ольга Смирнова');
+		await expect(companion).toContainText(menu.courses[0]!.label);
 
 		await page.goto('/rsvp');
 		await expect(toggle(page)).toBeChecked();
@@ -105,7 +109,8 @@ test.describe('a couple', () => {
 		await form(page).getByLabel(rsvp.attendingNo).check();
 		await expect(toggle(page)).toBeHidden();
 		await submit(page).click();
-		await expect(page).toHaveURL('/i');
+		await expect(page).toHaveURL('/thanks');
+		await expect(page.locator('[data-companion]')).toHaveCount(0);
 
 		await page.goto('/rsvp');
 		await form(page).getByLabel(rsvp.attendingYes).check();
