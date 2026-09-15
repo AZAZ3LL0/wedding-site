@@ -163,16 +163,6 @@ export const contentSchema = z.strictObject({
 		knownNew: text,
 		failed: text
 	}),
-	unknown: z.strictObject({
-		title: text,
-		text,
-		nameLabel: text,
-		contactLabel: text,
-		contactPlaceholder: text,
-		submit: text,
-		sent: text,
-		failed: text
-	}),
 	rsvp: z.strictObject({
 		cta: text,
 		ctaAnswered: text,

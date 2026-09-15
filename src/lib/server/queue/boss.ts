@@ -12,7 +12,6 @@ import {
 	handleRsvpNotifyAdmin,
 	rsvpNotifyAdminKey
 } from './jobs/rsvp-notify-admin';
-import { UNKNOWN_NOTIFY_ADMIN, handleUnknownNotifyAdmin } from './jobs/unknown-notify-admin';
 
 export type QueueDeps = {
 	connectionString: string;
@@ -27,7 +26,6 @@ export type QueueDeps = {
 export type Queue = {
 	boss: PgBoss;
 	sendDemoPing(pingId?: string): Promise<string | null>;
-	sendUnknownNotifyAdmin(requestId: string): Promise<string | null>;
 	sendRsvpNotifyAdmin(job: RsvpNotifyAdminJob): Promise<string | null>;
 	stop(): Promise<void>;
 };
@@ -53,7 +51,6 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 	};
 	// `stately` makes singletonKey reject a duplicate while the first job is queued or active.
 	await boss.createQueue(DEMO_PING, { ...retry, policy: 'stately' });
-	await boss.createQueue(UNKNOWN_NOTIFY_ADMIN, { ...retry, policy: 'stately' });
 	await boss.createQueue(RSVP_NOTIFY_ADMIN, { ...retry, policy: 'stately' });
 
 	const run = async (job: Job<unknown>, handler: () => Promise<unknown>) => {
@@ -70,9 +67,6 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 	await boss.work<unknown>(DEMO_PING, polling, async ([job]) => {
 		if (job) await run(job, () => handleDemoPing(deps, job.data));
 	});
-	await boss.work<unknown>(UNKNOWN_NOTIFY_ADMIN, polling, async ([job]) => {
-		if (job) await run(job, () => handleUnknownNotifyAdmin(deps, job.data));
-	});
 	await boss.work<unknown>(RSVP_NOTIFY_ADMIN, polling, async ([job]) => {
 		if (job) {
 			await run(job, () => handleRsvpNotifyAdmin({ ...deps, menu: getContent().menu }, job.data));
@@ -83,8 +77,6 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 		boss,
 		sendDemoPing: (pingId = crypto.randomUUID()) =>
 			boss.send(DEMO_PING, { pingId }, { ...retry, singletonKey: pingId }),
-		sendUnknownNotifyAdmin: (requestId) =>
-			boss.send(UNKNOWN_NOTIFY_ADMIN, { requestId }, { ...retry, singletonKey: requestId }),
 		sendRsvpNotifyAdmin: (job) =>
 			boss.send(RSVP_NOTIFY_ADMIN, job, { ...retry, singletonKey: rsvpNotifyAdminKey(job) }),
 		stop: () => boss.stop({ graceful: true, timeout: 5_000 })

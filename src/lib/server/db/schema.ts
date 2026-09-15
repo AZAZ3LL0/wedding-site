@@ -97,15 +97,6 @@ export const reminders = pgTable(
 	})
 );
 
-// A name that matched nobody. The organizer resolves it in the admin.
-export const unknownRequests = pgTable('unknown_requests', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	rawName: text('raw_name').notNull(),
-	contact: text('contact'),
-	resolvedAt: timestamp('resolved_at', { withTimezone: true }),
-	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
-});
-
 export const guestSessions = pgTable('guest_sessions', {
 	id: text('id').primaryKey(), // random token from the cookie
 	guestId: uuid('guest_id')
