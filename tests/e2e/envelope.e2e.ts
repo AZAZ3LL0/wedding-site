@@ -2,6 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { content } from '../../src/lib/content/wedding';
 
 const envelope = (page: Page) => page.getByRole('dialog');
+// Main content and footer share one wrapper that goes inert under the envelope.
+const pageContent = (page: Page) => page.locator('div:has(> main)');
 const openButton = (page: Page) => page.getByRole('button', { name: content.envelope.open });
 const coverHeading = (page: Page) =>
 	page.getByRole('heading', { level: 1, name: content.cover.title });
@@ -11,7 +13,7 @@ test('covers the card on the first visit and keeps the page from scrolling', asy
 
 	await expect(envelope(page)).toBeVisible();
 	await expect(envelope(page)).toHaveAccessibleName(content.envelope.title);
-	await expect(page.locator('main')).toHaveAttribute('inert');
+	await expect(pageContent(page)).toHaveAttribute('inert');
 	await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
 });
 
@@ -20,7 +22,7 @@ test('opens with a tap and hands focus to the invitation', async ({ page }) => {
 	await openButton(page).click();
 
 	await expect(envelope(page)).toBeHidden();
-	await expect(page.locator('main')).not.toHaveAttribute('inert');
+	await expect(pageContent(page)).not.toHaveAttribute('inert');
 	await expect(page.locator('main')).toBeFocused();
 	await expect(coverHeading(page)).toBeVisible();
 });
@@ -80,6 +82,6 @@ test.describe('with prefers-reduced-motion', () => {
 		await page.goto('/i');
 		await expect(coverHeading(page)).toBeVisible();
 		await expect(envelope(page)).toBeHidden();
-		await expect(page.locator('main')).not.toHaveAttribute('inert');
+		await expect(pageContent(page)).not.toHaveAttribute('inert');
 	});
 });

@@ -91,3 +91,33 @@ test('location section links the venue to the map and has no registry', async ({
 	// registry is null in wedding.ts: the day has no civil ceremony.
 	await expect(section.locator('[data-place="registry"]')).toHaveCount(0);
 });
+
+test('dress code shows every palette color with its name', async ({ page }) => {
+	await page.goto('/i');
+	const section = page.getByRole('region', { name: content.sections.dressCode.title });
+	await section.scrollIntoViewIfNeeded();
+
+	await expect(section.getByText(content.dressCode.text)).toBeVisible();
+	const swatches = section.locator('[data-swatch]');
+	await expect(swatches).toHaveCount(content.dressCode.palette.length);
+	for (const [index, color] of content.dressCode.palette.entries()) {
+		const swatch = swatches.nth(index);
+		await expect(swatch).toHaveText(color.name);
+		const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(color.hex.slice(i, i + 2), 16));
+		await expect(swatch.locator('span').first()).toHaveCSS(
+			'background-color',
+			`rgb(${r}, ${g}, ${b})`
+		);
+	}
+});
+
+test('footer signs the invitation from the hosts', async ({ page }) => {
+	await page.goto('/i');
+	const footer = page.getByRole('contentinfo');
+	await footer.scrollIntoViewIfNeeded();
+
+	await expect(footer.getByText(content.sections.farewell.eyebrow)).toBeVisible();
+	await expect(footer.getByText(content.hosts)).toBeVisible();
+	// Ivory on olive-deep, the dark section variant.
+	await expect(footer.locator('section')).toHaveCSS('color', 'rgb(251, 248, 240)');
+});
