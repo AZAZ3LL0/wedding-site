@@ -2,7 +2,14 @@ import type { ContentData } from '$lib/content/schema';
 import type { Db } from '$lib/server/db';
 import { showsRegistry } from '$lib/server/guests/segment';
 import type { GuestPublic, RsvpPayload } from '$lib/types';
-import { setTelegramUsername, upsertRsvp, withLockedGuest } from './repo';
+import {
+	deleteCompanion,
+	setTelegramUsername,
+	upsertCompanion,
+	upsertRsvp,
+	withLockedGuest,
+	type Companion
+} from './repo';
 
 export type RsvpRejection =
 	| 'companionNotAllowed'
@@ -123,6 +130,20 @@ export function checkRsvp(
 
 export type RsvpSource = 'web' | 'bot';
 
+// A companion comes by definition and only picks a menu; the rest stays at the column defaults.
+export function companionAnswer(companion: Companion): RsvpAnswer {
+	return {
+		attending: 'yes',
+		attendingRegistry: false,
+		mainCourses: companion.mainCourses,
+		drinks: companion.drinks,
+		allergies: null,
+		needsTransfer: false,
+		songRequest: null,
+		comment: null
+	};
+}
+
 export type SubmitResult =
 	| { kind: 'saved'; created: boolean; updatedAt: string }
 	| { kind: 'rejected'; reason: RsvpRejection }
@@ -141,9 +162,17 @@ export async function submitRsvp(
 		const checked = checkRsvp(payload, guest, content);
 		if (!checked.ok) return { kind: 'rejected', reason: checked.reason };
 
-		const { answer, telegramUsername } = checked.value;
+		const { answer, telegramUsername, companion } = checked.value;
 		const saved = await upsertRsvp(tx, guest.id, answer, source);
 		await setTelegramUsername(tx, guest.id, telegramUsername);
+
+		// No companion in a valid answer means none: that is how a guest removes one (invariant 3).
+		if (companion) {
+			const companionId = await upsertCompanion(tx, guest, companion);
+			await upsertRsvp(tx, companionId, companionAnswer(companion), source);
+		} else {
+			await deleteCompanion(tx, guest.id);
+		}
 		return { kind: 'saved', created: saved.created, updatedAt: saved.updatedAt.toISOString() };
 	});
 }
