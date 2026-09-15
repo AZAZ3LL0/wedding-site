@@ -37,6 +37,7 @@
 			invitation={content.invitation}
 			event={content.event}
 			labels={content.ui.countdown}
+			welcome={data.welcome}
 		/>
 		<Location
 			registry={content.registry}

@@ -7,14 +7,19 @@
 		invitation: ContentData['invitation'];
 		event: ContentData['event'];
 		labels: ContentData['ui']['countdown'];
+		welcome: { greeting: string; name: string };
 	};
 
-	let { invitation, event, labels }: Props = $props();
+	let { invitation, event, labels, welcome }: Props = $props();
 </script>
 
 <Section variant="light" aria-labelledby="invitation-title">
 	<Reveal>
 		<div class="mx-auto flex max-w-xl flex-col items-center gap-6 text-center">
+			<p class="flex flex-col items-center gap-1" data-welcome>
+				<span class="text-xl">{welcome.greeting}</span>
+				<span class="font-script text-4xl text-wine">{welcome.name}</span>
+			</p>
 			<p class="eyebrow text-olive">{invitation.eyebrow}</p>
 			<div id="invitation-title">
 				<Heading level={2} script>{invitation.title}</Heading>
