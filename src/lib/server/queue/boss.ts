@@ -5,6 +5,7 @@ import { getTelegramClient } from '$lib/server/telegram';
 import { TelegramError, type TelegramClient } from '$lib/server/telegram/client';
 import { InvalidPayloadError } from './errors';
 import { DEMO_PING, handleDemoPing } from './jobs/demo-ping';
+import { UNKNOWN_NOTIFY_ADMIN, handleUnknownNotifyAdmin } from './jobs/unknown-notify-admin';
 
 export type QueueDeps = {
 	connectionString: string;
@@ -19,6 +20,7 @@ export type QueueDeps = {
 export type Queue = {
 	boss: PgBoss;
 	sendDemoPing(pingId?: string): Promise<string | null>;
+	sendUnknownNotifyAdmin(requestId: string): Promise<string | null>;
 	stop(): Promise<void>;
 };
 
@@ -43,6 +45,7 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 	};
 	// `stately` makes singletonKey reject a duplicate while the first job is queued or active.
 	await boss.createQueue(DEMO_PING, { ...retry, policy: 'stately' });
+	await boss.createQueue(UNKNOWN_NOTIFY_ADMIN, { ...retry, policy: 'stately' });
 
 	const run = async (job: Job<unknown>, handler: () => Promise<unknown>) => {
 		try {
@@ -54,18 +57,20 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 		}
 	};
 
-	await boss.work<unknown>(
-		DEMO_PING,
-		{ pollingIntervalSeconds: deps.pollingIntervalSeconds ?? 2 },
-		async ([job]) => {
-			if (job) await run(job, () => handleDemoPing(deps, job.data));
-		}
-	);
+	const polling = { pollingIntervalSeconds: deps.pollingIntervalSeconds ?? 2 };
+	await boss.work<unknown>(DEMO_PING, polling, async ([job]) => {
+		if (job) await run(job, () => handleDemoPing(deps, job.data));
+	});
+	await boss.work<unknown>(UNKNOWN_NOTIFY_ADMIN, polling, async ([job]) => {
+		if (job) await run(job, () => handleUnknownNotifyAdmin(deps, job.data));
+	});
 
 	return {
 		boss,
 		sendDemoPing: (pingId = crypto.randomUUID()) =>
 			boss.send(DEMO_PING, { pingId }, { ...retry, singletonKey: pingId }),
+		sendUnknownNotifyAdmin: (requestId) =>
+			boss.send(UNKNOWN_NOTIFY_ADMIN, { requestId }, { ...retry, singletonKey: requestId }),
 		stop: () => boss.stop({ graceful: true, timeout: 5_000 })
 	};
 }
