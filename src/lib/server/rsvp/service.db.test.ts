@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { afterAll, describe, expect, inject, it } from 'vitest';
 import { parseContent } from '$lib/content/schema';
 import { content as raw } from '$lib/content/wedding';
@@ -7,6 +7,7 @@ import { createDb } from '$lib/server/db';
 import { guests, parties, rsvps } from '$lib/server/db/schema';
 import { nameKey } from '$lib/server/guests/name-key';
 import { rsvpPayloadSchema, type RsvpPayload } from '$lib/types';
+import { findCompanion } from './repo';
 import { submitRsvp, type RulesContent } from './service';
 
 const { db, close } = createDb(inject('databaseUrl'));
@@ -38,7 +39,9 @@ const content: RulesContent = {
 	byAudience: base.byAudience
 };
 
-type PartyOptions = Partial<Pick<typeof parties.$inferInsert, 'audience' | 'invitedToRegistry'>>;
+type PartyOptions = Partial<
+	Pick<typeof parties.$inferInsert, 'audience' | 'invitedToRegistry' | 'plusOnePolicy'>
+>;
 
 // A party and guest of its own per test, so suites never see each other's answers.
 async function newGuest(options: PartyOptions = {}) {
@@ -157,5 +160,147 @@ describe('submitRsvp', () => {
 
 	it('reports a guest that no longer exists', async () => {
 		await expect(submit(randomUUID(), payload())).resolves.toEqual({ kind: 'missing' });
+	});
+});
+
+describe('submitRsvp: companion (tech.md §4 invariants 1 to 3)', () => {
+	const olga = {
+		firstName: 'Ольга',
+		lastName: 'Смирнова',
+		mainCourses: ['fish'],
+		drinks: ['juice']
+	};
+
+	async function inviterWithParty() {
+		const guestId = await newGuest({ plusOnePolicy: 'allowed' });
+		const [row] = await db.select().from(guests).where(eq(guests.id, guestId));
+		return { guestId, partyId: row!.partyId };
+	}
+
+	const companionsOf = (guestId: string) =>
+		db.select().from(guests).where(eq(guests.invitedByGuestId, guestId));
+
+	it('1: creates the companion as a plus one in the inviter party with its own answer', async () => {
+		const { guestId, partyId } = await inviterWithParty();
+
+		await submit(guestId, payload({ mainCourses: ['plov'], companion: olga }));
+
+		const [companion, ...rest] = await companionsOf(guestId);
+		expect(rest).toHaveLength(0);
+		expect(companion).toMatchObject({
+			partyId,
+			isPlusOne: true,
+			invitedByGuestId: guestId,
+			firstName: 'Ольга',
+			lastName: 'Смирнова',
+			displayName: 'Ольга',
+			nameKey: nameKey('Ольга Смирнова'),
+			telegramChatId: null
+		});
+		expect(companion!.botToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+		// The companion's own row is what menu counters add up.
+		const [answer] = await rowsOf(companion!.id);
+		expect(answer).toMatchObject({
+			attending: 'yes',
+			mainCourses: ['fish'],
+			drinks: ['juice'],
+			attendingRegistry: false,
+			source: 'web'
+		});
+		const coming = await db
+			.select({ mainCourses: rsvps.mainCourses })
+			.from(rsvps)
+			.where(inArray(rsvps.guestId, [guestId, companion!.id]));
+		expect(coming.flatMap((r) => r.mainCourses).sort()).toEqual(['fish', 'plov']);
+	});
+
+	it('2: resubmitting updates the one companion instead of adding another', async () => {
+		const { guestId } = await inviterWithParty();
+
+		await submit(guestId, payload({ companion: olga }));
+		const [first] = await companionsOf(guestId);
+		await submit(guestId, payload({ companion: olga }));
+		await submit(
+			guestId,
+			payload({ companion: { firstName: 'Оля', lastName: '', mainCourses: [], drinks: ['tea'] } })
+		);
+
+		const companions = await companionsOf(guestId);
+		expect(companions).toHaveLength(1);
+		expect(companions[0]).toMatchObject({ id: first!.id, firstName: 'Оля', nameKey: 'оля' });
+		expect(companions[0]!.botToken).toBe(first!.botToken);
+		expect(await rowsOf(first!.id)).toHaveLength(1);
+		expect(await findCompanion(db, guestId)).toEqual({
+			firstName: 'Оля',
+			lastName: '',
+			mainCourses: [],
+			drinks: ['tea']
+		});
+	});
+
+	it('2: concurrent submissions with a companion still leave exactly one', async () => {
+		const { guestId } = await inviterWithParty();
+
+		await Promise.all(
+			Array.from({ length: 4 }, () => submit(guestId, payload({ companion: olga })))
+		);
+
+		expect(await companionsOf(guestId)).toHaveLength(1);
+	});
+
+	it('3: answering no removes the companion and its answer', async () => {
+		const { guestId } = await inviterWithParty();
+		await submit(guestId, payload({ companion: olga }));
+		const [companion] = await companionsOf(guestId);
+
+		await expect(submit(guestId, payload({ attending: 'no' }))).resolves.toMatchObject({
+			kind: 'saved'
+		});
+
+		expect(await companionsOf(guestId)).toHaveLength(0);
+		expect(await rowsOf(companion!.id)).toHaveLength(0);
+		expect(await findCompanion(db, guestId)).toBeNull();
+	});
+
+	it('removes the companion when a guest who still comes drops them', async () => {
+		const { guestId } = await inviterWithParty();
+		await submit(guestId, payload({ companion: olga }));
+
+		await submit(guestId, payload({ companion: null }));
+
+		expect(await companionsOf(guestId)).toHaveLength(0);
+	});
+
+	it('rejects a companion with no and keeps the existing one untouched', async () => {
+		const { guestId } = await inviterWithParty();
+		await submit(guestId, payload({ companion: olga }));
+
+		const result = await submit(guestId, payload({ attending: 'no', companion: olga }));
+
+		expect(result).toEqual({ kind: 'rejected', reason: 'companionNotAttending' });
+		expect(await companionsOf(guestId)).toHaveLength(1);
+	});
+
+	it('rejects a companion when the party allows none and creates no row', async () => {
+		const guestId = await newGuest({ plusOnePolicy: 'none' });
+
+		const result = await submit(guestId, payload({ companion: olga }));
+
+		expect(result).toEqual({ kind: 'rejected', reason: 'companionNotAllowed' });
+		expect(await companionsOf(guestId)).toHaveLength(0);
+	});
+
+	it('rejects an unknown dish of the companion and rolls the whole answer back', async () => {
+		const { guestId } = await inviterWithParty();
+
+		const result = await submit(
+			guestId,
+			payload({ companion: { ...olga, mainCourses: ['lagman'] } })
+		);
+
+		expect(result).toEqual({ kind: 'rejected', reason: 'unknownOption' });
+		expect(await rowsOf(guestId)).toHaveLength(0);
+		expect(await companionsOf(guestId)).toHaveLength(0);
 	});
 });
