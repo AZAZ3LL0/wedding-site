@@ -15,6 +15,13 @@
       "when": 1789331189176,
       "tag": "0001_job_receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789509805623,
+      "tag": "0002_drop_unknown_requests",
+      "breakpoints": true
     }
   ]
 }
