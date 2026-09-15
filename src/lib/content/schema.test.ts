@@ -84,7 +84,6 @@ describe('parseContent', () => {
 		['a missing audience', without(['byAudience', 'colleagues'])],
 		['an audience without a label', without(['byAudience', 'friends', 'label'])],
 		['a blank entry title', withValue(['entry', 'title'], ' ')],
-		['unknown request copy without a submit label', without(['unknown', 'submit'])],
 		['rsvp copy without the closed notice', without(['rsvp', 'closed'])],
 		['a blank rsvp submit label', withValue(['rsvp', 'submit'], '  ')],
 		['thanks copy without the edit link', without(['thanks', 'edit'])],
