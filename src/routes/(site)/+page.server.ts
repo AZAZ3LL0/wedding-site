@@ -1,111 +1,116 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, type Cookies } from '@sveltejs/kit';
 import { z } from 'zod';
 import { getConfig } from '$lib/server/config';
 import { getContent } from '$lib/server/content';
 import { getDb } from '$lib/server/db';
-import { match } from '$lib/server/guests/match';
-import { insertUnknownRequest, listMatchCandidates } from '$lib/server/guests/repo';
+import {
+	chooseCard,
+	enter,
+	register,
+	type EntryName,
+	type KnownCard
+} from '$lib/server/guests/entry';
+import type { GroupLabels } from '$lib/server/guests/match';
 import { startSession } from '$lib/server/guests/session';
-import { getAppQueue } from '$lib/server/queue/boss';
-import type { MatchResult } from '$lib/types';
 import type { Actions, PageServerLoad } from './$types';
 
-const findForm = z.object({ name: z.string().trim().min(1).max(100) });
-const chooseForm = findForm.extend({ guestId: z.uuid() });
-const unknownForm = findForm.extend({
-	contact: z
-		.string()
-		.trim()
-		.max(100)
-		.transform((value) => value || null)
-});
+const namePart = z.string().trim().min(1).max(60);
+const nameForm = z.object({ firstName: namePart, lastName: namePart });
+const chooseForm = nameForm.extend({ guestId: z.uuid() });
 
-type Status = 'invalid' | 'notFound' | 'choose' | 'unknownInvalid' | 'sent' | 'failed';
-type Candidates = Extract<MatchResult, { kind: 'ambiguous' }>['candidates'];
+type Status = 'invalid' | 'known' | 'failed';
 
 // One shape for every outcome, so the page reads any field without narrowing on the action.
-function state(status: Status, name = '', { contact = '', candidates = [] as Candidates } = {}) {
-	return { status, name, contact, candidates };
+function state(
+	status: Status,
+	name: EntryName,
+	{ cards = [] as KnownCard[], missing = { firstName: false, lastName: false } } = {}
+) {
+	return { status, ...name, cards, missing };
 }
 
-async function matchName(name: string): Promise<MatchResult> {
+function typedName(data: Record<string, FormDataEntryValue>): EntryName {
+	const text = (value: FormDataEntryValue | undefined) => (typeof value === 'string' ? value : '');
+	return { firstName: text(data.firstName), lastName: text(data.lastName) };
+}
+
+function invalid(data: Record<string, FormDataEntryValue>) {
+	const name = typedName(data);
+	return fail(
+		400,
+		state('invalid', name, {
+			missing: {
+				firstName: !namePart.safeParse(name.firstName).success,
+				lastName: !namePart.safeParse(name.lastName).success
+			}
+		})
+	);
+}
+
+function groupLabels(): GroupLabels {
 	const { byAudience } = getContent();
-	return match(name, await listMatchCandidates(getDb()), {
+	return {
 		family: byAudience.family.label,
 		friends: byAudience.friends.label,
 		colleagues: byAudience.colleagues.label
-	});
+	};
 }
 
-function unmatched(name: string, result: MatchResult) {
-	return result.kind === 'ambiguous'
-		? state('choose', name, { candidates: result.candidates })
-		: state('notFound', name);
-}
-
-async function signIn(cookies: Parameters<typeof startSession>[1], guestId: string) {
+async function signIn(cookies: Cookies, guestId: string): Promise<never> {
 	await startSession(getDb(), cookies, guestId, { secure: getConfig().isProduction });
 	redirect(303, '/i');
 }
 
-export const load: PageServerLoad = ({ locals, url }) => {
+async function readForm(request: Request) {
+	return Object.fromEntries(await request.formData());
+}
+
+export const load: PageServerLoad = ({ locals }) => {
 	if (locals.guest) redirect(303, '/i');
-	// A plain link opens the request form, so it works before JavaScript loads.
-	return { notListed: url.searchParams.has('unknown') };
 };
 
 export const actions: Actions = {
-	find: async ({ request, cookies }) => {
-		const parsed = findForm.safeParse(Object.fromEntries(await request.formData()));
-		if (!parsed.success) return fail(400, state('invalid'));
+	register: async ({ request, cookies }) => {
+		const data = await readForm(request);
+		const parsed = nameForm.safeParse(data);
+		if (!parsed.success) return invalid(data);
 
-		const result = await matchName(parsed.data.name);
-		if (result.kind === 'single') return signIn(cookies, result.guestId);
-		return unmatched(parsed.data.name, result);
+		let guestId: string;
+		try {
+			const result = await enter(getDb(), parsed.data, groupLabels());
+			if (result.kind === 'known') return state('known', parsed.data, { cards: result.cards });
+			guestId = result.guestId;
+		} catch (error) {
+			console.error('[entry] registration failed:', (error as Error).message);
+			return fail(500, state('failed', parsed.data));
+		}
+		return signIn(cookies, guestId);
 	},
 
 	choose: async ({ request, cookies }) => {
-		const parsed = chooseForm.safeParse(Object.fromEntries(await request.formData()));
-		if (!parsed.success) return fail(400, state('invalid'));
-		const { name, guestId } = parsed.data;
+		const data = await readForm(request);
+		const parsed = chooseForm.safeParse(data);
+		if (!parsed.success) return invalid(data);
+		const { guestId, ...name } = parsed.data;
 
-		// The choice is re-derived from the name, so a posted id outside it never opens a card.
-		const result = await matchName(name);
-		const allowed =
-			result.kind === 'single'
-				? [result.guestId]
-				: result.kind === 'ambiguous'
-					? result.candidates.map((c) => c.guestId)
-					: [];
-		if (allowed.includes(guestId)) return signIn(cookies, guestId);
-		return fail(400, unmatched(name, result));
+		const choice = await chooseCard(getDb(), name, guestId, groupLabels());
+		if (choice.allowed) return signIn(cookies, guestId);
+		return fail(400, state('known', name, { cards: choice.cards }));
 	},
 
-	unknown: async ({ request }) => {
-		const raw = Object.fromEntries(await request.formData());
-		const parsed = unknownForm.safeParse(raw);
-		if (!parsed.success) {
-			const text = (value: FormDataEntryValue | undefined) =>
-				typeof value === 'string' ? value : '';
-			return fail(400, state('unknownInvalid', text(raw.name), { contact: text(raw.contact) }));
-		}
-		const { name, contact } = parsed.data;
+	// «Это не я»: the guest has seen the matching cards and asks for one of their own.
+	new: async ({ request, cookies }) => {
+		const data = await readForm(request);
+		const parsed = nameForm.safeParse(data);
+		if (!parsed.success) return invalid(data);
 
-		let requestId: string;
+		let guestId: string;
 		try {
-			requestId = await insertUnknownRequest(getDb(), { rawName: name, contact });
+			guestId = await register(getDb(), parsed.data);
 		} catch (error) {
-			console.error('[unknown] request not saved:', (error as Error).message);
-			return fail(500, state('failed', name, { contact: contact ?? '' }));
+			console.error('[entry] registration failed:', (error as Error).message);
+			return fail(500, state('failed', parsed.data));
 		}
-
-		// The request is already saved and waits in the admin, so a queue outage is not the guest's problem.
-		try {
-			const queue = await getAppQueue();
-			await queue.sendUnknownNotifyAdmin(requestId);
-		} catch (error) {
-			console.error(`[unknown] ${requestId} not queued:`, (error as Error).message);
-		}
-		return state('sent', name);
+		return signIn(cookies, guestId);
 	}
 };

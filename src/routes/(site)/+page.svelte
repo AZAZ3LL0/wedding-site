@@ -1,34 +1,23 @@
 <script lang="ts">
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { enhance } from '$app/forms';
-	import { resolve } from '$app/paths';
 	import { Button, Field, Heading, RadioGroup, Section, TextInput, Toast } from '$lib/ui';
 
 	let { data, form } = $props();
 
 	const entry = $derived(data.content.entry);
-	const unknown = $derived(data.content.unknown);
-	const requesting = $derived(
-		data.notListed ||
-			form?.status === 'notFound' ||
-			form?.status === 'unknownInvalid' ||
-			form?.status === 'failed'
-	);
-	const error = $derived(
-		form?.status === 'invalid'
-			? entry.nameRequired
-			: form?.status === 'notFound'
-				? entry.notFound
-				: undefined
-	);
+	const typed = $derived(form ? `${form.firstName.trim()} ${form.lastName.trim()}` : '');
+	const firstNameError = $derived(form?.missing.firstName ? entry.firstNameRequired : undefined);
+	const lastNameError = $derived(form?.missing.lastName ? entry.lastNameRequired : undefined);
 
-	type Action = 'find' | 'choose' | 'unknown';
+	type Action = 'register' | 'choose' | 'new';
 	let pending = $state<Action | null>(null);
 
 	const track =
 		(action: Action): SubmitFunction =>
-		() => {
-			pending = action;
+		({ submitter }) => {
+			// The known-cards form has two buttons; the one pressed decides what is pending.
+			pending = submitter?.getAttribute('formaction') === '?/new' ? 'new' : action;
 			return async ({ update }) => {
 				await update({ reset: false });
 				pending = null;
@@ -48,50 +37,73 @@
 				<div id="entry-title">
 					<Heading level={1} script>{entry.title}</Heading>
 				</div>
+				<p class="text-lg">{entry.text}</p>
 			</div>
 
 			<form
 				method="POST"
-				action="?/find"
+				action="?/register"
 				class="flex flex-col gap-6"
 				aria-labelledby="entry-title"
-				use:enhance={track('find')}
+				use:enhance={track('register')}
 			>
-				<Field label={entry.nameLabel} {error} required>
+				{#if form?.status === 'failed'}
+					<Toast kind="error" text={entry.failed} />
+				{/if}
+				<Field label={entry.firstNameLabel} error={firstNameError} required>
 					{#snippet children(id)}
 						<TextInput
 							{id}
-							name="name"
-							value={form?.name ?? ''}
-							placeholder={entry.namePlaceholder}
-							maxlength={100}
-							autocomplete="name"
+							name="firstName"
+							value={form?.firstName ?? ''}
+							maxlength={60}
+							autocomplete="given-name"
 							required
-							aria-invalid={error ? 'true' : undefined}
-							aria-describedby={error ? `${id}-error` : undefined}
+							aria-invalid={firstNameError ? 'true' : undefined}
+							aria-describedby={firstNameError ? `${id}-error` : undefined}
 						/>
 					{/snippet}
 				</Field>
-				<Button variant="solid" type="submit" loading={pending === 'find'}>{entry.submit}</Button>
+				<Field label={entry.lastNameLabel} error={lastNameError} required>
+					{#snippet children(id)}
+						<TextInput
+							{id}
+							name="lastName"
+							value={form?.lastName ?? ''}
+							maxlength={60}
+							autocomplete="family-name"
+							required
+							aria-invalid={lastNameError ? 'true' : undefined}
+							aria-describedby={lastNameError ? `${id}-error` : undefined}
+						/>
+					{/snippet}
+				</Field>
+				<Button variant="solid" type="submit" loading={pending === 'register'}>
+					{entry.submit}
+				</Button>
 			</form>
 
-			{#if form?.status === 'choose'}
+			{#if form?.status === 'known'}
 				<form
 					method="POST"
 					action="?/choose"
 					class="flex flex-col gap-6 border-t border-muted/30 pt-8"
-					aria-labelledby="choose-title"
+					aria-labelledby="known-title"
 					use:enhance={track('choose')}
 				>
-					<div id="choose-title">
-						<Heading level={2}>{entry.chooseTitle}</Heading>
+					<div id="known-title">
+						<Heading level={2}>{entry.knownTitle}</Heading>
 					</div>
-					<input type="hidden" name="name" value={form.name} />
-					<Field label={entry.chooseText} required>
+					<input type="hidden" name="firstName" value={form.firstName} />
+					<input type="hidden" name="lastName" value={form.lastName} />
+					<Field label={entry.knownText} required>
 						{#snippet children(id)}
 							<RadioGroup
 								name="guestId"
-								options={form.candidates.map((c) => ({ id: c.guestId, label: c.hint }))}
+								options={form.cards.map((card) => ({
+									id: card.guestId,
+									label: card.hint ? `${typed}, ${card.hint}` : typed
+								}))}
 								aria-labelledby="{id}-label"
 								required
 							/>
@@ -100,66 +112,16 @@
 					<Button variant="solid" type="submit" loading={pending === 'choose'}>
 						{entry.submit}
 					</Button>
-				</form>
-			{/if}
-
-			{#if form?.status === 'sent'}
-				<Toast kind="ok" text={unknown.sent} />
-			{:else if requesting}
-				<form
-					method="POST"
-					action="?/unknown"
-					class="flex flex-col gap-6 border-t border-muted/30 pt-8"
-					aria-labelledby="unknown-title"
-					use:enhance={track('unknown')}
-				>
-					<div id="unknown-title">
-						<Heading level={2}>{unknown.title}</Heading>
-					</div>
-					<p>{unknown.text}</p>
-					{#if form?.status === 'failed'}
-						<Toast kind="error" text={unknown.failed} />
-					{/if}
-					<Field
-						label={unknown.nameLabel}
-						error={form?.status === 'unknownInvalid' ? entry.nameRequired : undefined}
-						required
+					<Button
+						variant="ghost"
+						type="submit"
+						formaction="?/new"
+						formnovalidate
+						loading={pending === 'new'}
 					>
-						{#snippet children(id)}
-							<TextInput
-								{id}
-								name="name"
-								value={form?.name ?? ''}
-								maxlength={100}
-								autocomplete="name"
-								required
-								aria-invalid={form?.status === 'unknownInvalid' ? 'true' : undefined}
-								aria-describedby={form?.status === 'unknownInvalid' ? `${id}-error` : undefined}
-							/>
-						{/snippet}
-					</Field>
-					<Field label={unknown.contactLabel}>
-						{#snippet children(id)}
-							<TextInput
-								{id}
-								name="contact"
-								value={form?.contact ?? ''}
-								placeholder={unknown.contactPlaceholder}
-								maxlength={100}
-							/>
-						{/snippet}
-					</Field>
-					<Button variant="ghost" type="submit" loading={pending === 'unknown'}>
-						{unknown.submit}
+						{entry.knownNew}
 					</Button>
 				</form>
-			{:else}
-				<a
-					href="{resolve('/')}?unknown"
-					class="self-center text-olive-deep underline decoration-olive/40 underline-offset-4 hover:decoration-olive"
-				>
-					{entry.notListed}
-				</a>
 			{/if}
 		</div>
 	</Section>
