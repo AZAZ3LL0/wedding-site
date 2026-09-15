@@ -70,3 +70,24 @@ test.describe('performance', () => {
 		expect(lcp).toBeLessThan(2500);
 	});
 });
+
+test('location section links the venue to the map and has no registry', async ({ page }) => {
+	await page.goto('/i');
+	const section = page.getByRole('region', { name: content.sections.location.title });
+
+	const venue = section.locator('[data-place="venue"]');
+	await venue.scrollIntoViewIfNeeded();
+	await expect(venue.getByRole('heading', { name: content.venue.title })).toBeVisible();
+	await expect(venue.getByText(content.venue.address)).toBeVisible();
+	await expect(
+		venue.getByText(`${content.sections.location.venueStart} ${content.venue.startTime}`)
+	).toBeVisible();
+
+	const link = venue.getByRole('link', { name: content.ui.map.open });
+	await expect(link).toHaveAttribute('href', content.venue.mapUrl);
+	await expect(link).toHaveAttribute('target', '_blank');
+	await expect(link).toHaveAttribute('rel', /noopener/);
+
+	// registry is null in wedding.ts: the day has no civil ceremony.
+	await expect(section.locator('[data-place="registry"]')).toHaveCount(0);
+});
