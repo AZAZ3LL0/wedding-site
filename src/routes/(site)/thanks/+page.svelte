@@ -48,6 +48,23 @@
 				</section>
 			{/if}
 
+			{#if data.botLink}
+				<section class="flex flex-col gap-4" aria-labelledby="bot-title" data-bot-link>
+					<div id="bot-title">
+						<Heading level={3}>{thanks.bot.title}</Heading>
+					</div>
+					<p class="text-muted">{thanks.bot.text}</p>
+					<!-- A link, not a Button: it leaves the site for Telegram. -->
+					<a
+						href={data.botLink}
+						rel="noreferrer"
+						class="inline-flex min-h-11 items-center justify-center rounded-token border border-olive px-8 py-3 font-medium text-olive-deep transition-colors duration-(--dur-fast) ease-out hover:bg-olive hover:text-ivory focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-olive"
+					>
+						{thanks.bot.cta}
+					</a>
+				</section>
+			{/if}
+
 			<div class="flex flex-col items-center gap-6 text-olive">
 				<Divider orientation="vertical" />
 				{#if data.canEdit}
