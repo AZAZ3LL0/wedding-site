@@ -11,6 +11,24 @@ const openButton = (page: Page) => page.getByRole('button', { name: content.enve
 const coverHeading = (page: Page) =>
 	page.getByRole('heading', { level: 1, name: content.cover.title });
 
+test('meets a visitor without a session before the name form, then hands over to it', async ({
+	browser
+}) => {
+	// A clean context: no guest cookie, so the site opens on the entry page, not on /i.
+	const context = await browser.newContext(test.info().project.use);
+	const page = await context.newPage();
+	await page.goto('/');
+
+	await expect(envelope(page)).toBeVisible();
+	await expect(page.locator('main')).toHaveAttribute('inert');
+	await openButton(page).click();
+
+	await expect(envelope(page)).toBeHidden();
+	await expect(page.locator('main')).not.toHaveAttribute('inert');
+	await expect(page.getByLabel(content.entry.firstNameLabel)).toBeVisible();
+	await context.close();
+});
+
 test('covers the card on the first visit and keeps the page from scrolling', async ({ page }) => {
 	await page.goto('/i');
 
