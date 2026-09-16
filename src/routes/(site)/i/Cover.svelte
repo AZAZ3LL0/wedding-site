@@ -38,23 +38,10 @@
 			<p class="hosts"><ScriptText text={hosts} /></p>
 		</div>
 
-		<!-- One cut-out corner of roses, mirrored into the two corners of the printed card. -->
-		<img
-			class="rose rose-top"
-			src="/images/roses.webp"
-			alt=""
-			width="406"
-			height="418"
-			decoding="async"
-		/>
-		<img
-			class="rose rose-bottom"
-			src="/images/roses.webp"
-			alt=""
-			width="406"
-			height="418"
-			decoding="async"
-		/>
+		<!-- The printed card's own flowers, cut out of it so they can grow in when the envelope opens.
+		     Backgrounds rather than images, so the stylesheet decides when they are fetched. -->
+		<div class="flower flower-top" aria-hidden="true"></div>
+		<div class="flower flower-bottom" aria-hidden="true"></div>
 	</article>
 </header>
 
@@ -62,19 +49,24 @@
 	.scene {
 		display: grid;
 		justify-items: center;
-		padding: 3.5rem 1.25rem 2.5rem;
+		padding: 3rem 1.25rem 2.5rem;
 		overflow-x: clip;
 		background: radial-gradient(ellipse 90% 60% at 50% 35%, var(--c-ivory), transparent 75%);
 	}
 
+	/*
+	 * The lace frame is the printed card itself, 722 by 1280, with its panel cut out and its flowers
+	 * lifted off. Its slices sit on the panel edges, so the frame keeps its proportions at any width
+	 * while the panel grows with the text.
+	 */
 	.card {
+		--w: min(100vw - 2.5rem, 440px);
+
 		position: relative;
-		width: min(100%, 440px);
-		padding: clamp(18px, 5.5vw, 26px);
-		/* Embossed lace: cream on cream, lit from the top left, drawn without an image request. */
-		background:
-			url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44' fill='none'%3E%3Cg stroke='%23fffdf9' stroke-width='1.1' stroke-linecap='round'%3E%3Cpath d='M4 22c6-8 12-8 18 0s12 8 18 0'/%3E%3Ccircle cx='22' cy='22' r='3.2'/%3E%3Cpath d='M22 4c-4 5-4 9 0 13M22 40c4-5 4-9 0-13'/%3E%3C/g%3E%3Cg stroke='%23d9c8b9' stroke-width='.9' stroke-linecap='round' transform='translate(.7 .8)'%3E%3Cpath d='M4 22c6-8 12-8 18 0s12 8 18 0'/%3E%3Ccircle cx='22' cy='22' r='3.2'/%3E%3Cpath d='M22 4c-4 5-4 9 0 13M22 40c4-5 4-9 0-13'/%3E%3C/g%3E%3Cg fill='%23e3d4c6'%3E%3Ccircle cx='4' cy='4' r='1.6'/%3E%3Ccircle cx='40' cy='4' r='1.6'/%3E%3Ccircle cx='4' cy='40' r='1.6'/%3E%3Ccircle cx='40' cy='40' r='1.6'/%3E%3C/g%3E%3C/svg%3E"),
-			linear-gradient(145deg, #f6efe8, #ecdfd3);
+		width: var(--w);
+		border-style: solid;
+		border-width: calc(var(--w) * 0.2) calc(var(--w) * 0.144) calc(var(--w) * 0.186);
+		border-image: url('/images/card-frame.webp') 144 104 134 104 / auto / 0 stretch;
 		box-shadow:
 			0 24px 50px color-mix(in oklab, var(--c-accent-deep) 22%, transparent),
 			0 3px 8px color-mix(in oklab, var(--c-accent-deep) 14%, transparent);
@@ -84,14 +76,12 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: clamp(1.1rem, 4.5vw, 1.6rem);
-		padding: clamp(2.5rem, 11vw, 3.5rem) clamp(1rem, 5vw, 2rem);
-		border: 3px dotted color-mix(in oklab, var(--c-paper) 70%, var(--c-muted));
-		outline: 1px solid color-mix(in oklab, var(--c-paper) 55%, var(--c-muted));
-		outline-offset: 5px;
+		gap: clamp(0.85rem, 3.6vw, 1.25rem);
+		padding: clamp(1.5rem, 7vw, 2.25rem) clamp(0.25rem, 2vw, 1rem) clamp(3rem, 14vw, 4.25rem);
 		color: var(--c-accent);
 		text-align: center;
-		background: radial-gradient(ellipse at 50% 30%, var(--c-ivory), var(--c-paper));
+		/* The paper of the printed panel: warm cream, a shade lighter towards the top. */
+		background: radial-gradient(ellipse 90% 60% at 50% 25%, #f6f1ec, #efe6de);
 	}
 
 	/* «Кыз Узату!» runs about 5 em wide, so the size tracks the panel and each line stays whole. */
@@ -99,7 +89,7 @@
 		display: flex;
 		flex-direction: column;
 		font-family: var(--font-script);
-		font-size: clamp(2.4rem, 12.5vw, 3.9rem);
+		font-size: calc(var(--w) * 0.132);
 		font-weight: 400;
 		line-height: 1.05;
 		white-space: nowrap;
@@ -110,9 +100,9 @@
 	}
 
 	.text {
-		max-width: 30ch;
-		font-size: clamp(1.1rem, 4.6vw, 1.3rem);
-		line-height: 1.45;
+		max-width: 32ch;
+		font-size: clamp(0.98rem, 4.1vw, 1.18rem);
+		line-height: 1.4;
 		color: color-mix(in oklab, var(--c-accent) 88%, var(--c-ink));
 	}
 
@@ -120,7 +110,7 @@
 		display: flex;
 		flex-direction: column;
 		font-family: var(--font-display);
-		font-size: clamp(2.2rem, 10vw, 2.75rem);
+		font-size: clamp(1.9rem, 8.6vw, 2.4rem);
 		line-height: 1.1;
 		font-variant-numeric: lining-nums tabular-nums;
 	}
@@ -128,57 +118,77 @@
 	.where {
 		display: flex;
 		flex-direction: column;
-		gap: 0.9rem;
-		max-width: 22ch;
-		font-size: clamp(1.15rem, 4.8vw, 1.35rem);
-		line-height: 1.35;
+		gap: 0.6rem;
+		max-width: 24ch;
+		font-size: clamp(1.02rem, 4.3vw, 1.22rem);
+		line-height: 1.3;
 	}
 
+	/* Sized to the panel like the title, so the signature stays clear of the bottom flowers. */
 	.hosts {
 		font-family: var(--font-script);
-		font-size: clamp(2rem, 9vw, 2.5rem);
+		font-size: calc(var(--w) * 0.076);
 		line-height: 1.1;
+		white-space: nowrap;
 	}
 
-	.rose {
+	/* Anchored to the corners they grow from on the printed card; sizes are shares of its width. */
+	.flower {
 		position: absolute;
 		z-index: 1;
-		width: clamp(130px, 44%, 200px);
-		height: auto;
+		background: center / contain no-repeat;
 		pointer-events: none;
-		filter: drop-shadow(0 6px 10px color-mix(in oklab, var(--c-accent-deep) 30%, transparent));
 	}
 
-	/* The cut-out blooms along the top and left edges, so each corner mirrors it into place. */
-	.rose-top {
-		top: -1.6rem;
-		right: -1.6rem;
-		transform: scaleX(-1);
+	.flower-top {
+		top: calc(var(--w) * -0.2);
+		right: calc(var(--w) * -0.144);
+		width: calc(var(--w) * 0.4224);
+		aspect-ratio: 305 / 330;
+		background-image: url('/images/card-flower-top.webp');
+		transform-origin: 100% 0;
 	}
 
-	.rose-bottom {
-		bottom: -1.6rem;
-		left: -1.6rem;
-		transform: scaleY(-1);
+	.flower-bottom {
+		bottom: calc(var(--w) * -0.186);
+		left: calc(var(--w) * -0.144);
+		width: calc(var(--w) * 0.4432);
+		aspect-ratio: 320 / 439;
+		background-image: url('/images/card-flower-bottom.webp');
+		transform-origin: 0 100%;
 	}
 
-	/* Roses grow in as the envelope opens. Already open, no JS or reduced motion: they are there. */
+	/*
+	 * Under a closed envelope the frame and flowers are not fetched until the envelope is on screen
+	 * (see ENVELOPE_ART). Without JS, on a return visit or with reduced motion this never matches.
+	 */
+	/* The longhand on purpose: the CSS minifier empties a `border-image: none` shorthand. */
+	:global(html.js:not(.envelope-opened):not(.envelope-art)) .card {
+		border-image-source: none;
+		border-color: transparent;
+	}
+
+	:global(html.js:not(.envelope-opened):not(.envelope-art)) .flower {
+		background-image: none;
+	}
+
+	/* Flowers grow in as the envelope opens. Already open, no JS or reduced motion: they are there. */
 	@media (prefers-reduced-motion: no-preference) {
-		.rose {
+		.flower {
 			transition:
-				opacity 1.1s var(--ease-out) var(--bloom-delay, 0ms),
-				scale 1.5s var(--ease-out) var(--bloom-delay, 0ms),
-				rotate 1.5s var(--ease-out) var(--bloom-delay, 0ms);
+				opacity 1.2s var(--ease-out) var(--bloom-delay, 150ms),
+				scale 1.6s var(--ease-out) var(--bloom-delay, 150ms),
+				rotate 1.6s var(--ease-out) var(--bloom-delay, 150ms);
 		}
 
-		.rose-bottom {
-			--bloom-delay: 250ms;
+		.flower-bottom {
+			--bloom-delay: 450ms;
 		}
 
-		:global(html.js:not(.envelope-opened)) .rose {
+		:global(html.js:not(.envelope-opened)) .flower {
 			opacity: 0;
-			scale: 0.55;
-			rotate: -10deg;
+			scale: 0.5;
+			rotate: -12deg;
 		}
 	}
 </style>
