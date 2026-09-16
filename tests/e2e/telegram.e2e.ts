@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { content } from '../../src/lib/content/wedding';
-import { sendUpdate } from './telegram';
+import { SECRET_HEADER, WEBHOOK_SECRET, sendUpdate } from './telegram';
 
 const { entry, rsvp, thanks, menu } = content;
 
@@ -73,8 +73,9 @@ test('the guest opens the personal link, binds the chat and talks to the bot', a
 	await page.goto('/kitchen-sink/telegram');
 	const inbox = page.locator('[data-message]').filter({ hasText: `${chatId}` });
 	await expect(inbox.first()).toBeVisible({ timeout: 15_000 });
-	await expect(inbox.filter({ hasText: firstName })).toHaveCount(1);
-	await expect(inbox.filter({ hasText: 'уже подключены' })).toHaveCount(1);
+	// The bot greets the guest by name once, then reports the binding it already has.
+	await expect(inbox.filter({ hasText: `${firstName}, готово` })).toHaveCount(1);
+	await expect(inbox.filter({ hasText: `${firstName}, вы уже подключены` })).toHaveCount(1);
 	await expect(inbox.filter({ hasText: content.venue.address })).toHaveCount(1);
 	await expect(inbox.filter({ hasText: rsvp.attendingYes })).toHaveCount(1);
 });
@@ -100,13 +101,23 @@ test('the webhook refuses a request without the secret header', async ({ request
 	expect(response.status()).toBe(404);
 });
 
-test('the webhook refuses a body that is not an update', async ({ request, baseURL }) => {
-	const response = await sendUpdate(request, baseURL!, newChatId(), '/address');
-	expect(response.status()).toBe(200);
+test('the webhook refuses the wrong secret', async ({ request, baseURL }) => {
+	const response = await request.post(`${baseURL}/api/telegram`, {
+		headers: { [SECRET_HEADER]: `${WEBHOOK_SECRET}x` },
+		data: { update_id: 1, message: { chat: { id: 1, type: 'private' }, text: '/address' } }
+	});
 
-	const broken = await request.post(`${baseURL}/api/telegram`, {
-		headers: { 'x-telegram-bot-api-secret-token': 'wrong-secret' },
+	expect(response.status()).toBe(404);
+});
+
+test('the webhook drops a body that is not an update instead of retrying it', async ({
+	request,
+	baseURL
+}) => {
+	const response = await request.post(`${baseURL}/api/telegram`, {
+		headers: { [SECRET_HEADER]: WEBHOOK_SECRET },
 		data: { nope: true }
 	});
-	expect(broken.status()).toBe(404);
+
+	expect(response.status()).toBe(400);
 });
