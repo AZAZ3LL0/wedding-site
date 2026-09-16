@@ -4,10 +4,14 @@ import { afterAll, beforeEach, describe, expect, inject, it } from 'vitest';
 import { parseContent, type ContentData } from '$lib/content/schema';
 import { content as raw } from '$lib/content/wedding';
 import { createDb } from '$lib/server/db';
-import { guests, parties } from '$lib/server/db/schema';
+import { guests, parties, rsvps } from '$lib/server/db/schema';
 import { nameKey } from '$lib/server/guests/name-key';
+import { findCompanion } from '$lib/server/rsvp/repo';
+import { submitRsvp } from '$lib/server/rsvp/service';
 import { FakeTelegramClient } from '$lib/server/telegram/fake';
+import { rsvpNotifyAdminJobSchema, rsvpPayloadSchema, type RsvpNotifyAdminJob } from '$lib/types';
 import { handleUpdate, type BotDeps } from './bot';
+import { commands } from './templates';
 import { telegramUpdateSchema } from './update';
 
 const { db, close } = createDb(inject('databaseUrl'));
@@ -282,5 +286,192 @@ describe('bot commands', () => {
 		await send('/address', newChatId());
 
 		expect(lastText()).toContain('персональную ссылку');
+	});
+});
+
+describe('answering in the bot', () => {
+	// Takes the guest from "no answer" to a saved yes, the way /rsvp invites them to.
+	async function answered(chatId: number) {
+		const guest = await newGuest({ chatId });
+		await send('/yes', chatId);
+		return guest;
+	}
+
+	async function storedRsvp(guestId: string) {
+		const [row] = await db.select().from(rsvps).where(eq(rsvps.guestId, guestId));
+		return row;
+	}
+
+	it('shows a guest without an answer how to give one', async () => {
+		const chatId = newChatId();
+		await newGuest({ chatId });
+
+		await send('/rsvp', chatId);
+
+		expect(lastText()).toContain('ещё не ответили');
+		expect(lastText()).toContain(`/${commands.yes}`);
+	});
+
+	it('saves a yes through the shared rsvp payload', async () => {
+		const chatId = newChatId();
+		const { guestId } = await newGuest({ chatId });
+
+		await send('/yes', chatId);
+
+		expect(await storedRsvp(guestId)).toMatchObject({ attending: 'yes', source: 'bot' });
+		expect(lastText()).toContain('Ответ сохранён');
+	});
+
+	it('saves a no and offers the way back', async () => {
+		const chatId = newChatId();
+		const { guestId } = await answered(chatId);
+
+		await send('/no', chatId);
+
+		expect(await storedRsvp(guestId)).toMatchObject({ attending: 'no' });
+		expect(lastText()).toContain(content.rsvp.attendingNo);
+		expect(lastText()).toContain(`/${commands.yes}`);
+	});
+
+	it('picks a dish and a drink by their numbers', async () => {
+		const chatId = newChatId();
+		const { guestId } = await answered(chatId);
+
+		await send('/course_2', chatId);
+		await send('/drink_1', chatId);
+
+		expect(await storedRsvp(guestId)).toMatchObject({ mainCourses: ['fish'], drinks: ['tea'] });
+	});
+
+	it('replaces the dish while the menu allows only one', async () => {
+		const chatId = newChatId();
+		const { guestId } = await answered(chatId);
+
+		await send('/course_1', chatId);
+		await send('/course_2', chatId);
+
+		expect(await storedRsvp(guestId)).toMatchObject({ mainCourses: ['fish'] });
+	});
+
+	it('takes a drink back when the guest taps it again', async () => {
+		const chatId = newChatId();
+		const { guestId } = await answered(chatId);
+
+		await send('/drink_2', chatId);
+		await send('/drink_2', chatId);
+
+		expect(await storedRsvp(guestId)).toMatchObject({ drinks: [] });
+	});
+
+	it('marks what is chosen in the state message', async () => {
+		const chatId = newChatId();
+		await answered(chatId);
+
+		await send('/course_1', chatId);
+
+		expect(lastText()).toContain('✓ Плов');
+		expect(lastText()).toContain('Рыба /course_2');
+	});
+
+	it('refuses a dish that is not on the menu', async () => {
+		const chatId = newChatId();
+		const { guestId } = await answered(chatId);
+
+		await send('/course_9', chatId);
+
+		expect(lastText()).toBe(content.rsvp.unknownOption);
+		expect(await storedRsvp(guestId)).toMatchObject({ mainCourses: [] });
+	});
+
+	it('asks for an answer before a dish when none is on file', async () => {
+		const chatId = newChatId();
+		const { guestId } = await newGuest({ chatId });
+
+		await send('/course_1', chatId);
+
+		expect(lastText()).toContain('Сначала ответьте');
+		expect(await storedRsvp(guestId)).toBeUndefined();
+	});
+
+	it('asks for an answer before a dish when the guest said no', async () => {
+		const chatId = newChatId();
+		const { guestId } = await answered(chatId);
+		await send('/no', chatId);
+
+		await send('/course_1', chatId);
+
+		expect(lastText()).toContain('Сначала ответьте');
+		expect(await storedRsvp(guestId)).toMatchObject({ mainCourses: [] });
+	});
+
+	it('keeps the companion and the free text a web answer left behind', async () => {
+		const chatId = newChatId();
+		const { guestId } = await newGuest({ chatId });
+		await submitRsvp(
+			db,
+			guestId,
+			rsvpPayloadSchema.parse({
+				attending: 'yes',
+				mainCourses: ['plov'],
+				allergies: 'орехи',
+				comment: 'приедем к шести',
+				telegramUsername: '@petr_g',
+				companion: { firstName: 'Анна', lastName: 'Гостева', mainCourses: ['fish'], drinks: [] }
+			}),
+			{ content, source: 'web', now: now() }
+		);
+
+		await send('/drink_1', chatId);
+
+		expect(await storedRsvp(guestId)).toMatchObject({
+			mainCourses: ['plov'],
+			drinks: ['tea'],
+			allergies: 'орехи',
+			comment: 'приедем к шести'
+		});
+		const companion = await findCompanion(db, guestId);
+		expect(companion).toMatchObject({ firstName: 'Анна', mainCourses: ['fish'] });
+	});
+
+	it('queues the organizer notice for a bot edit', async () => {
+		const chatId = newChatId();
+		const queued: RsvpNotifyAdminJob[] = [];
+		const { guestId } = await newGuest({ chatId });
+		deps = { ...deps, notifyAdmin: async (job) => void queued.push(job) };
+
+		await send('/yes', chatId);
+
+		expect(queued).toHaveLength(1);
+		expect(rsvpNotifyAdminJobSchema.parse(queued[0])).toMatchObject({
+			guestId,
+			kind: 'created'
+		});
+	});
+
+	it('still saves the answer when the queue is down', async () => {
+		const chatId = newChatId();
+		const { guestId } = await newGuest({ chatId });
+		deps = {
+			...deps,
+			notifyAdmin: async () => {
+				throw new Error('queue is down');
+			}
+		};
+
+		await send('/yes', chatId);
+
+		expect(await storedRsvp(guestId)).toMatchObject({ attending: 'yes' });
+		expect(lastText()).toContain('Ответ сохранён');
+	});
+
+	it('refuses an edit after the deadline', async () => {
+		const chatId = newChatId();
+		const { guestId } = await newGuest({ chatId });
+		deps = { ...deps, now: () => new Date('2026-11-20T12:00:00+04:00') };
+
+		await send('/yes', chatId);
+
+		expect(lastText()).toBe(content.rsvp.closed);
+		expect(await storedRsvp(guestId)).toBeUndefined();
 	});
 });
