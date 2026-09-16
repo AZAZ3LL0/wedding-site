@@ -5,27 +5,13 @@ import { content as raw } from '$lib/content/wedding';
 import type { RsvpPublic } from '$lib/types';
 import { answerRows, companionSummary } from './summary';
 
-const base = parseContent(raw);
-const content = {
-	...base,
-	menu: {
-		multiSelect: true,
-		courses: [
-			{ id: 'plov', label: 'Плов' },
-			{ id: 'fish', label: 'Судак' }
-		],
-		drinks: [
-			{ id: 'tea', label: 'Чай' },
-			{ id: 'juice', label: 'Сок' }
-		]
-	}
-};
-const { rsvp: copy, thanks } = content;
+const content = parseContent(raw);
+const { rsvp: copy } = content;
 
 const yes: RsvpPublic = {
 	attending: 'yes',
 	attendingRegistry: true,
-	mainCourses: ['fish', 'plov'],
+	mainCourses: [],
 	drinks: [],
 	allergies: 'орехи',
 	needsTransfer: true,
@@ -35,12 +21,10 @@ const yes: RsvpPublic = {
 };
 
 describe('answerRows', () => {
-	it('lists a full yes answer with menu labels in the chosen order', () => {
+	it('lists a full yes answer', () => {
 		expect(answerRows(yes, 'maria', content)).toEqual([
 			{ label: copy.attendingLabel, value: copy.attendingYes },
 			{ label: copy.registryLabel, value: copy.registryOption },
-			{ label: copy.coursesLabel, value: 'Судак, Плов' },
-			{ label: copy.drinksLabel, value: thanks.empty },
 			{ label: copy.allergiesLabel, value: 'орехи' },
 			{ label: copy.transferLabel, value: copy.transferOption },
 			{ label: copy.commentLabel, value: 'Приеду к семи' },
@@ -49,7 +33,7 @@ describe('answerRows', () => {
 	});
 
 	it('shows only the answer, comment and username for a no', () => {
-		const no = { ...yes, attending: 'no' as const, telegramUsername: null };
+		const no = { ...yes, attending: 'no' as const };
 		expect(answerRows(no, null, content)).toEqual([
 			{ label: copy.attendingLabel, value: copy.attendingNo },
 			{ label: copy.commentLabel, value: 'Приеду к семи' }
@@ -64,60 +48,39 @@ describe('answerRows', () => {
 			needsTransfer: false,
 			comment: null
 		};
-		expect(answerRows(plain, null, content).map((r) => r.label)).toEqual([
-			copy.attendingLabel,
-			copy.coursesLabel,
-			copy.drinksLabel
-		]);
+		expect(answerRows(plain, null, content).map((r) => r.label)).toEqual([copy.attendingLabel]);
 	});
 
-	it('never shows a menu id the content does not have', () => {
+	// The form no longer asks about dishes and drinks, so the summary never mentions them.
+	it('never shows a menu row, whatever an older answer stored', () => {
 		const ids = fc.array(fc.stringMatching(/^[a-z0-9-]{1,10}$/), { maxLength: 5 });
 		fc.assert(
 			fc.property(ids, ids, (mainCourses, drinks) => {
-				const rows = answerRows({ ...yes, mainCourses, drinks }, null, content);
-				const known = new Set([
-					...content.menu.courses.map((o) => o.label),
-					...content.menu.drinks.map((o) => o.label),
-					thanks.empty
-				]);
-				for (const row of rows.filter(
-					(r) => r.label === copy.coursesLabel || r.label === copy.drinksLabel
-				)) {
-					for (const part of row.value.split(', ')) expect(known).toContain(part);
-				}
+				const labels = answerRows({ ...yes, mainCourses, drinks }, 'maria', content).map(
+					(r) => r.label
+				);
+				expect(labels).not.toContain(copy.coursesLabel);
+				expect(labels).not.toContain(copy.drinksLabel);
 			})
 		);
 	});
 });
 
 describe('companionSummary', () => {
-	it('names the companion and lists their menu', () => {
+	it('names the companion and lists no menu', () => {
 		expect(
-			companionSummary(
-				{
-					firstName: 'Ольга',
-					lastName: 'Смирнова',
-					mainCourses: ['plov'],
-					drinks: ['tea', 'juice']
-				},
-				content
-			)
-		).toEqual({
-			name: 'Ольга Смирнова',
-			rows: [
-				{ label: copy.coursesLabel, value: 'Плов' },
-				{ label: copy.drinksLabel, value: 'Чай, Сок' }
-			]
-		});
+			companionSummary({
+				firstName: 'Ольга',
+				lastName: 'Смирнова',
+				mainCourses: ['plov'],
+				drinks: ['tea']
+			})
+		).toEqual({ name: 'Ольга Смирнова', rows: [] });
 	});
 
 	it('uses the first name alone without a last name', () => {
-		const summary = companionSummary(
-			{ firstName: 'Оля', lastName: '', mainCourses: [], drinks: [] },
-			content
-		);
-		expect(summary.name).toBe('Оля');
-		expect(summary.rows.map((r) => r.value)).toEqual([thanks.empty, thanks.empty]);
+		expect(
+			companionSummary({ firstName: 'Оля', lastName: '', mainCourses: [], drinks: [] }).name
+		).toBe('Оля');
 	});
 });

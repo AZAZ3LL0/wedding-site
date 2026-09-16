@@ -2,11 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import { content } from '../../src/lib/content/wedding';
 import { signIn } from './guest';
 
-const { rsvp, thanks, menu } = content;
+const { rsvp, thanks } = content;
 
 // Seed guest whose party allows a plus one; no other suite writes his answer.
 const INVITER = 'Алексей Петров';
-const INVITER_DISPLAY_NAME = 'Лёша';
 
 const form = (page: Page) => page.getByRole('form', { name: rsvp.title });
 const submit = (page: Page) =>
@@ -20,10 +19,6 @@ async function answerWithCompanion(page: Page, firstName: string, lastName: stri
 	await toggle(page).check();
 	await companionName(page).fill(firstName);
 	await form(page).getByLabel(rsvp.companionLastName).fill(lastName);
-	await form(page)
-		.getByRole('radiogroup', { name: rsvp.companionCourses })
-		.getByLabel(menu.courses[0]!.label)
-		.check();
 	await submit(page).click();
 	await expect(page).toHaveURL('/thanks');
 }
@@ -60,17 +55,12 @@ test.describe('a couple', () => {
 		const companion = page.locator('[data-companion]');
 		await expect(companion).toContainText(thanks.companionTitle);
 		await expect(companion).toContainText('Ольга Смирнова');
-		await expect(companion).toContainText(menu.courses[0]!.label);
 
 		await page.goto('/rsvp');
 		await expect(toggle(page)).toBeChecked();
 		await expect(companionName(page)).toHaveValue('Ольга');
 		await expect(form(page).getByLabel(rsvp.companionLastName)).toHaveValue('Смирнова');
-		await expect(
-			form(page)
-				.getByRole('radiogroup', { name: rsvp.companionCourses })
-				.getByLabel(menu.courses[0]!.label)
-		).toBeChecked();
+		await expect(form(page).getByText(rsvp.companionCourses, { exact: true })).toHaveCount(0);
 	});
 
 	test('the companion name opens the inviter card, not a card of their own', async ({
@@ -80,10 +70,10 @@ test.describe('a couple', () => {
 	}) => {
 		await context.clearCookies();
 		await signIn(context, baseURL!, 'Ольга Смирнова');
-		await page.goto('/i');
-		const welcome = page.locator('[data-welcome]');
-		await welcome.scrollIntoViewIfNeeded();
-		await expect(welcome).toContainText(INVITER_DISPLAY_NAME);
+		// The inviter's own answer shows: the companion is saved on the card they opened.
+		await page.goto('/rsvp');
+		await expect(toggle(page)).toBeChecked();
+		await expect(companionName(page)).toHaveValue('Ольга');
 	});
 
 	test('sending again updates the one companion', async ({ page }) => {

@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		attending: rsvp.attending,
 		rows: answerRows(rsvp, telegramUsername, content),
-		companion: companion ? companionSummary(companion, content) : null,
+		companion: companion ? companionSummary(companion) : null,
 		canEdit: isRsvpOpen(content.event, new Date()),
 		// The one place botToken reaches a browser, and only the guest's own (tech.md §11).
 		botLink: link ? botLink({ ...link, botUsername: getConfig().telegram.botUsername }) : null
