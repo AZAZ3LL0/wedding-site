@@ -209,7 +209,9 @@ export const contentSchema = z.strictObject({
 		companionTitle: text,
 		empty: text,
 		edit: text,
-		back: text
+		back: text,
+		// Local stub pending a tech.md bump: section 7 does not spell this block out yet.
+		bot: z.strictObject({ title: text, text, cta: text })
 	}),
 	ui: z.strictObject({
 		countdown: z.strictObject({
