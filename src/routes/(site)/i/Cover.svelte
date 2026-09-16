@@ -1,244 +1,184 @@
 <script lang="ts">
 	import type { ContentData } from '$lib/content/schema';
 	import { dateParts } from '$lib/content/event';
-	import { Heading, ScriptText } from '$lib/ui';
-	import Bouquet from './Bouquet.svelte';
-	import { scallopedEllipse } from './ornaments';
+	import { ScriptText } from '$lib/ui';
 
-	type Props = { cover: ContentData['cover']; date: string };
+	type Props = {
+		cover: ContentData['cover'];
+		event: Pick<ContentData['event'], 'date' | 'time'>;
+		venue: Pick<ContentData['venue'], 'title' | 'address'>;
+		hosts: string;
+	};
 
-	let { cover, date }: Props = $props();
+	let { cover, event, venue, hosts }: Props = $props();
 
-	const [day, month, year] = $derived(dateParts(date));
-	const plate = scallopedEllipse(130, 55, 118, 44, 30, 7);
-	const id = $props.id();
+	const [day, month, year] = $derived(dateParts(event.date));
 </script>
 
-<header class="cover">
-	<div class="composition">
-		<Bouquet flowers={3} class="bouquet bouquet-back" />
+<header class="scene">
+	<article class="card" data-card>
+		<div class="panel">
+			<h1 class="title">
+				<ScriptText text={cover.title} />
+				<span class="title-line"><ScriptText text={cover.eyebrow} /></span>
+			</h1>
 
-		<div class="card">
-			<div class="frame">
-				<p class="eyebrow text-accent">{cover.eyebrow}</p>
-				<div class="text-wine">
-					<Heading level={1} script><ScriptText text={cover.title} /></Heading>
-				</div>
-				<p class="max-w-[28ch]">{cover.text}</p>
-			</div>
+			<p class="text">{cover.text}</p>
+
+			<p class="when">
+				<time datetime={event.date}>{day} | {month} | {year}</time>
+				<time datetime="{event.date}T{event.time}">{event.time}</time>
+			</p>
+
+			<p class="where">
+				<span>{venue.address}</span>
+				<span class="venue">{venue.title}</span>
+			</p>
+
+			<p class="hosts"><ScriptText text={hosts} /></p>
 		</div>
 
-		<figure class="oval">
-			<!-- The first screen's largest image: fetched eagerly and first. -->
-			<img
-				src={cover.photo.src}
-				alt={cover.photo.alt}
-				width="600"
-				height="800"
-				fetchpriority="high"
-				decoding="async"
-			/>
-		</figure>
-
-		<div class="plate">
-			<svg viewBox="0 0 260 110" aria-hidden="true">
-				<defs>
-					<radialGradient id="{id}-wine" cx="40%" cy="30%" r="80%">
-						<stop offset="0" style:stop-color="color-mix(in oklab, var(--c-wine) 80%, white)" />
-						<stop offset="1" style:stop-color="color-mix(in oklab, var(--c-wine) 75%, black)" />
-					</radialGradient>
-				</defs>
-				<path d={plate} fill="url(#{id}-wine)" />
-				<ellipse
-					cx="130"
-					cy="55"
-					rx="104"
-					ry="33"
-					fill="none"
-					stroke-opacity=".55"
-					stroke-dasharray="1.5 3"
-					style:stroke="var(--c-paper)"
-				/>
-			</svg>
-			<time datetime={date}>{day} | {month} | {year}</time>
-		</div>
-
-		<div class="pocket" aria-hidden="true">
-			<svg viewBox="0 0 440 150" preserveAspectRatio="none">
-				<path class="pocket-body" d="M0 18 L220 70 L440 18 L440 150 L0 150 Z" />
-				<path class="pocket-fold" d="M0 150 L220 62 L440 150" />
-				<path class="pocket-edge" d="M0 18 L220 70 L440 18" />
-			</svg>
-		</div>
-
-		<Bouquet flowers={5} class="bouquet bouquet-front" />
-	</div>
+		<!-- One cut-out corner of roses, mirrored into the two corners of the printed card. -->
+		<img
+			class="rose rose-top"
+			src="/images/roses.webp"
+			alt=""
+			width="406"
+			height="418"
+			decoding="async"
+		/>
+		<img
+			class="rose rose-bottom"
+			src="/images/roses.webp"
+			alt=""
+			width="406"
+			height="418"
+			decoding="async"
+		/>
+	</article>
 </header>
 
 <style>
-	.cover {
+	.scene {
 		display: grid;
 		justify-items: center;
-		padding: 4.5rem 1.25rem 0;
-		background: radial-gradient(ellipse 80% 60% at 50% 30%, var(--c-ivory), transparent 70%);
-	}
-
-	.composition {
-		position: relative;
-		display: grid;
-		justify-items: center;
-		width: min(100%, 440px);
-		padding-bottom: 7rem;
+		padding: 3.5rem 1.25rem 2.5rem;
+		overflow-x: clip;
+		background: radial-gradient(ellipse 90% 60% at 50% 35%, var(--c-ivory), transparent 75%);
 	}
 
 	.card {
 		position: relative;
-		z-index: 2;
-		width: min(88%, 360px);
-		border: 12px solid transparent;
-		/* Striped paper border from the printed card, drawn without an image request. */
+		width: min(100%, 440px);
+		padding: clamp(18px, 5.5vw, 26px);
+		/* Embossed lace: cream on cream, lit from the top left, drawn without an image request. */
 		background:
-			linear-gradient(var(--c-ivory), var(--c-ivory)) padding-box,
-			repeating-linear-gradient(90deg, var(--c-accent) 0 3px, var(--c-ivory) 3px 9px) border-box;
+			url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44' fill='none'%3E%3Cg stroke='%23fffdf9' stroke-width='1.1' stroke-linecap='round'%3E%3Cpath d='M4 22c6-8 12-8 18 0s12 8 18 0'/%3E%3Ccircle cx='22' cy='22' r='3.2'/%3E%3Cpath d='M22 4c-4 5-4 9 0 13M22 40c4-5 4-9 0-13'/%3E%3C/g%3E%3Cg stroke='%23d9c8b9' stroke-width='.9' stroke-linecap='round' transform='translate(.7 .8)'%3E%3Cpath d='M4 22c6-8 12-8 18 0s12 8 18 0'/%3E%3Ccircle cx='22' cy='22' r='3.2'/%3E%3Cpath d='M22 4c-4 5-4 9 0 13M22 40c4-5 4-9 0-13'/%3E%3C/g%3E%3Cg fill='%23e3d4c6'%3E%3Ccircle cx='4' cy='4' r='1.6'/%3E%3Ccircle cx='40' cy='4' r='1.6'/%3E%3Ccircle cx='4' cy='40' r='1.6'/%3E%3Ccircle cx='40' cy='40' r='1.6'/%3E%3C/g%3E%3C/svg%3E"),
+			linear-gradient(145deg, #f6efe8, #ecdfd3);
 		box-shadow:
-			0 18px 40px color-mix(in oklab, var(--c-accent-deep) 20%, transparent),
-			0 2px 6px color-mix(in oklab, var(--c-accent-deep) 14%, transparent);
+			0 24px 50px color-mix(in oklab, var(--c-accent-deep) 22%, transparent),
+			0 3px 8px color-mix(in oklab, var(--c-accent-deep) 14%, transparent);
 	}
 
-	.frame {
+	.panel {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 1rem;
-		padding: 2.25rem 1.25rem 4.5rem;
-		border: 1px solid var(--c-accent);
-		outline: 1px solid color-mix(in oklab, var(--c-accent) 35%, transparent);
-		outline-offset: -6px;
+		gap: clamp(1.1rem, 4.5vw, 1.6rem);
+		padding: clamp(2.5rem, 11vw, 3.5rem) clamp(1rem, 5vw, 2rem);
+		border: 3px dotted color-mix(in oklab, var(--c-paper) 70%, var(--c-muted));
+		outline: 1px solid color-mix(in oklab, var(--c-paper) 55%, var(--c-muted));
+		outline-offset: 5px;
+		color: var(--c-accent);
 		text-align: center;
+		background: radial-gradient(ellipse at 50% 30%, var(--c-ivory), var(--c-paper));
 	}
 
-	.oval {
-		position: absolute;
-		z-index: 3;
-		top: -2.5rem;
-		left: -0.5rem;
-		width: 32%;
-		margin: 0;
-		aspect-ratio: 3 / 4;
-		padding: 7px;
-		border-radius: 50%;
-		background: var(--c-paper);
-		box-shadow:
-			0 10px 22px color-mix(in oklab, var(--c-accent-deep) 28%, transparent),
-			inset 0 0 0 1px color-mix(in oklab, var(--c-muted) 35%, transparent);
-		rotate: -6deg;
+	/* «Кыз Узату!» runs about 5 em wide, so the size tracks the panel and each line stays whole. */
+	.title {
+		display: flex;
+		flex-direction: column;
+		font-family: var(--font-script);
+		font-size: clamp(2.4rem, 12.5vw, 3.9rem);
+		font-weight: 400;
+		line-height: 1.05;
+		white-space: nowrap;
 	}
 
-	.oval img {
-		width: 100%;
-		height: 100%;
-		border-radius: 50%;
-		object-fit: cover;
+	.title-line {
+		margin-top: 0.05em;
 	}
 
-	.plate {
-		position: absolute;
-		z-index: 4;
-		left: 50%;
-		bottom: 5.25rem;
-		width: min(64%, 250px);
-		translate: -50% 0;
-		filter: drop-shadow(0 8px 12px color-mix(in oklab, var(--c-wine) 30%, transparent));
+	.text {
+		max-width: 30ch;
+		font-size: clamp(1.1rem, 4.6vw, 1.3rem);
+		line-height: 1.45;
+		color: color-mix(in oklab, var(--c-accent) 88%, var(--c-ink));
 	}
 
-	.plate svg {
-		display: block;
-		width: 100%;
-		height: auto;
-	}
-
-	.plate time {
-		position: absolute;
-		inset: 0;
-		display: grid;
-		place-items: center;
-		color: var(--c-ivory);
+	.when {
+		display: flex;
+		flex-direction: column;
 		font-family: var(--font-display);
-		font-size: clamp(1.4rem, 6vw, 1.75rem);
+		font-size: clamp(2.2rem, 10vw, 2.75rem);
+		line-height: 1.1;
 		font-variant-numeric: lining-nums tabular-nums;
-		letter-spacing: 0.04em;
 	}
 
-	.pocket {
+	.where {
+		display: flex;
+		flex-direction: column;
+		gap: 0.9rem;
+		max-width: 22ch;
+		font-size: clamp(1.15rem, 4.8vw, 1.35rem);
+		line-height: 1.35;
+	}
+
+	.hosts {
+		font-family: var(--font-script);
+		font-size: clamp(2rem, 9vw, 2.5rem);
+		line-height: 1.1;
+	}
+
+	.rose {
 		position: absolute;
-		z-index: 3;
-		inset: auto 0 0;
-		height: 9.5rem;
-	}
-
-	.pocket svg {
-		display: block;
-		width: 100%;
-		height: 100%;
-	}
-
-	.pocket-body {
-		fill: var(--c-accent);
-	}
-
-	.pocket-fold {
-		fill: none;
-		stroke: var(--c-ivory);
-		stroke-opacity: 0.25;
-		stroke-width: 1.2;
-		vector-effect: non-scaling-stroke;
-	}
-
-	.pocket-edge {
-		fill: none;
-		stroke: var(--c-accent-deep);
-		stroke-width: 2;
-		vector-effect: non-scaling-stroke;
-	}
-
-	.composition :global(.bouquet) {
-		position: absolute;
-		pointer-events: none;
-	}
-
-	.composition :global(.bouquet-front) {
-		z-index: 5;
-		right: -0.75rem;
-		bottom: 2rem;
-		width: 42%;
-	}
-
-	.composition :global(.bouquet-back) {
 		z-index: 1;
-		top: 45%;
-		left: -1.5rem;
-		width: 26%;
-		rotate: 160deg;
+		width: clamp(130px, 44%, 200px);
+		height: auto;
+		pointer-events: none;
+		filter: drop-shadow(0 6px 10px color-mix(in oklab, var(--c-accent-deep) 30%, transparent));
 	}
 
-	@media (min-width: 720px) {
-		.cover {
-			padding-top: 6rem;
+	/* The cut-out blooms along the top and left edges, so each corner mirrors it into place. */
+	.rose-top {
+		top: -1.6rem;
+		right: -1.6rem;
+		transform: scaleX(-1);
+	}
+
+	.rose-bottom {
+		bottom: -1.6rem;
+		left: -1.6rem;
+		transform: scaleY(-1);
+	}
+
+	/* Roses grow in as the envelope opens. Already open, no JS or reduced motion: they are there. */
+	@media (prefers-reduced-motion: no-preference) {
+		.rose {
+			transition:
+				opacity 1.1s var(--ease-out) var(--bloom-delay, 0ms),
+				scale 1.5s var(--ease-out) var(--bloom-delay, 0ms),
+				rotate 1.5s var(--ease-out) var(--bloom-delay, 0ms);
 		}
 
-		.composition {
-			width: 560px;
+		.rose-bottom {
+			--bloom-delay: 250ms;
 		}
 
-		.oval {
-			top: 1rem;
-			left: -3rem;
-			width: 34%;
-		}
-
-		.composition :global(.bouquet-front) {
-			right: -3.5rem;
-			width: 36%;
+		:global(html.js:not(.envelope-opened)) .rose {
+			opacity: 0;
+			scale: 0.55;
+			rotate: -10deg;
 		}
 	}
 </style>
