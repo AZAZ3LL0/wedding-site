@@ -8,6 +8,8 @@ declare global {
 		interface Locals {
 			// Set by hooks.server.ts from the session cookie, null for a visitor without one.
 			guest: GuestPublic | null;
+			// Set by hooks.server.ts from the signed admin cookie, see lib/server/admin/auth.ts.
+			admin: boolean;
 		}
 		// interface PageData {}
 		// interface PageState {}
