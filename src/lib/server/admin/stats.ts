@@ -19,10 +19,6 @@ export type AdminStats = {
 
 type Menu = Pick<ContentData['menu'], 'courses' | 'drinks'>;
 
-export function guestName(row: Pick<AdminGuestRow, 'firstName' | 'lastName'>): string {
-	return [row.firstName, row.lastName].filter(Boolean).join(' ');
-}
-
 // One vote per guest per option: a repeated id is rejected on write, and a menu id that no longer
 // exists is dropped instead of showing up as a slug.
 function tally(options: { id: string; label: string }[], picks: string[][]): MenuTally[] {
@@ -53,7 +49,7 @@ export function aggregate(rows: AdminGuestRow[], menu: Menu): AdminStats {
 			coming.map(({ rsvp }) => rsvp.drinks)
 		),
 		allergies: coming.flatMap(({ row, rsvp }) =>
-			rsvp.allergies ? [{ name: guestName(row), text: rsvp.allergies }] : []
+			rsvp.allergies ? [{ name: row.name, text: rsvp.allergies }] : []
 		)
 	};
 }

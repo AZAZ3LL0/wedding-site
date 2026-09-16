@@ -1,10 +1,18 @@
 <script lang="ts">
 	import { admin } from '$lib/content/admin';
 	import type { AdminGuestRow } from '$lib/server/admin/repo';
-	import { guestName } from '$lib/server/admin/stats';
 	import PartySettings from './PartySettings.svelte';
+	import { actionUrl, type Filters } from './filters';
 
-	let { rows, menu }: { rows: AdminGuestRow[]; menu: { id: string; label: string }[] } = $props();
+	let {
+		rows,
+		menu,
+		filters
+	}: {
+		rows: AdminGuestRow[];
+		menu: { id: string; label: string }[];
+		filters: Filters;
+	} = $props();
 
 	const copy = admin.table;
 
@@ -45,7 +53,7 @@
 				{#each rows as row (row.id)}
 					<tr class="border-t border-slate-200 align-top">
 						<td class="p-2">
-							<span class="font-medium">{guestName(row)}</span>
+							<span class="font-medium">{row.name}</span>
 							<span class="block text-xs text-slate-500">{row.partyTitle}</span>
 							{#if row.isPlusOne}
 								<span class="block text-xs text-slate-500">
@@ -98,9 +106,9 @@
 						</td>
 						<td class="p-2">
 							{#if firstOfParty.has(row.id)}
-								<PartySettings {row} />
+								<PartySettings {row} {filters} />
 							{/if}
-							<form method="post" action="?/deleteGuest" class="mt-2">
+							<form method="post" action={actionUrl('deleteGuest', filters)} class="mt-2">
 								<input type="hidden" name="guestId" value={row.id} />
 								<button
 									type="submit"

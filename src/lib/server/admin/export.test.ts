@@ -28,6 +28,7 @@ const row = (over: Partial<AdminGuestRow> = {}): AdminGuestRow => ({
 	id: 'guest',
 	firstName: 'Иван',
 	lastName: 'Иванов',
+	name: 'Иван Иванов',
 	isPlusOne: false,
 	invitedByName: null,
 	companionName: null,
@@ -78,11 +79,12 @@ describe('buildGuestWorkbook', () => {
 				id: 'b',
 				firstName: 'Ольга',
 				lastName: 'Смирнова',
+				name: 'Ольга Смирнова',
 				isPlusOne: true,
 				invitedByName: 'Иван Иванов',
 				rsvp: answer({ mainCourses: ['beef'] })
 			}),
-			row({ id: 'c', firstName: 'Мария', lastName: 'Иванова' })
+			row({ id: 'c', firstName: 'Мария', lastName: 'Иванова', name: 'Мария Иванова' })
 		]);
 		const sheet = workbook.getWorksheet(admin.export.guestsSheet)!;
 

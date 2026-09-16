@@ -3,7 +3,7 @@ import ExcelJS from 'exceljs';
 import { admin } from '$lib/content/admin';
 import type { ContentData } from '$lib/content/schema';
 import type { AdminGuestRow } from './repo';
-import { aggregate, guestName } from './stats';
+import { aggregate } from './stats';
 
 type Menu = Pick<ContentData['menu'], 'courses' | 'drinks'>;
 
@@ -44,7 +44,7 @@ export async function buildGuestWorkbook(rows: AdminGuestRow[], menu: Menu) {
 
 	for (const row of rows) {
 		sheet.addRow({
-			name: guestName(row),
+			name: row.name,
 			party: row.partyTitle,
 			audience: admin.audience[row.audience],
 			status: admin.status[row.rsvp?.attending ?? 'none'],

@@ -53,6 +53,6 @@
 		<h2 class="text-lg font-semibold">{admin.nav.guests}</h2>
 		<Filters filters={data.filters} />
 		<p class="text-sm text-slate-600">{admin.filters.found}: {data.rows.length}</p>
-		<GuestTable rows={data.rows} {menu} />
+		<GuestTable rows={data.rows} {menu} filters={data.filters} />
 	</section>
 </main>
