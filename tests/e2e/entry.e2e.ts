@@ -39,7 +39,7 @@ test('registers a new guest, keeps them signed in and lets them answer', async (
 	const name = newcomer();
 	await enterName(page, name.firstName, name.lastName);
 	await expect(page).toHaveURL('/i');
-	await expect(page.locator('[data-welcome]')).toContainText(name.firstName);
+	await expect(page.locator('[data-card]')).toBeVisible();
 
 	await page.reload();
 	await expect(page).toHaveURL('/i');
@@ -118,7 +118,25 @@ test('namesakes get hints to tell their cards apart', async ({ page }) => {
 	await known.getByLabel(byAudience.colleagues.label).check();
 	await known.getByRole('button', { name: entry.submit }).click();
 	await expect(page).toHaveURL('/i');
-	await expect(page.locator('[data-welcome]')).toContainText('Анна Сергеевна');
+
+	// The page no longer shows the name, so the card is told apart by the answer left on it.
+	const note = `коллега ${Date.now()}`;
+	await page.goto('/rsvp');
+	const form = page.getByRole('form', { name: rsvp.title });
+	await form.getByLabel(rsvp.attendingNo).check();
+	await form.getByLabel(rsvp.commentLabel).fill(note);
+	await form.getByRole('button', { name: new RegExp(`^(${rsvp.submit}|${rsvp.save})$`) }).click();
+	await expect(page).toHaveURL('/thanks');
+
+	await page.context().clearCookies();
+	await enterName(page, 'Анна', 'Сидорова');
+	await knownForm(page).getByLabel(byAudience.family.label).check();
+	await knownForm(page).getByRole('button', { name: entry.submit }).click();
+	await expect(page).toHaveURL('/i');
+	await page.goto('/rsvp');
+	await expect(
+		page.getByRole('form', { name: rsvp.title }).getByLabel(rsvp.commentLabel)
+	).not.toHaveValue(note);
 });
 
 test('refuses a chosen card that the name does not match', async ({ page }) => {

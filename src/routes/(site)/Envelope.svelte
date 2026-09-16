@@ -3,7 +3,13 @@
 	import { onMount } from 'svelte';
 	import { motionTokens } from '$lib/actions/motion-tokens';
 	import type { ContentData } from '$lib/content/schema';
-	import { ENVELOPE_ART, ENVELOPE_OPENED, openingPlan, rememberOpened } from './envelope';
+	import {
+		ENVELOPE_ART,
+		ENVELOPE_LEAVING,
+		ENVELOPE_OPENED,
+		openingPlan,
+		rememberOpened
+	} from './envelope';
 
 	type Props = {
 		envelope: ContentData['envelope'];
@@ -22,12 +28,9 @@
 	let seal: HTMLElement;
 	let flap: HTMLElement;
 	let stage: HTMLElement;
-	let roses: HTMLElement[] = $state([]);
 	let opening = $state(false);
-	let artReady = $state(false);
 
 	function releaseArt() {
-		artReady = true;
 		document.documentElement.classList.add(ENVELOPE_ART);
 	}
 
@@ -77,14 +80,11 @@
 			{ transform: ['perspective(1400px) rotateX(0deg)', 'perspective(1400px) rotateX(-178deg)'] },
 			{ ...plan.flap, ease: [0.6, 0, 0.3, 1] }
 		);
-		roses.forEach((rose, index) =>
-			animate(
-				rose,
-				{ opacity: [0, 1], transform: ['scale(0.4) rotate(-14deg)', 'scale(1) rotate(0deg)'] },
-				{ ...plan.flowers, delay: plan.flowers.delay + index * 0.18, ease }
-			)
+		// The envelope sinks a little as it fades, and the card underneath rises into its place.
+		setTimeout(
+			() => document.documentElement.classList.add(ENVELOPE_LEAVING),
+			plan.fade.delay * 1000
 		);
-		// The envelope sinks a little as it fades, handing the screen to the card underneath.
 		animate(stage, { transform: ['translateY(0)', 'translateY(6%)'] }, { ...plan.fade, ease });
 		await animate(root, { opacity: [1, 0] }, { ...plan.fade, ease: 'easeOut' }).finished.catch(
 			() => undefined
@@ -135,19 +135,6 @@
 	</div>
 
 	<p class="hint eyebrow" aria-hidden="true" bind:this={hint}>{envelope.open}</p>
-
-	{#each ['top', 'bottom'] as corner, index (corner)}
-		<img
-			class="rose rose-{corner}"
-			src={artReady ? '/images/roses.webp' : undefined}
-			alt=""
-			width="406"
-			height="418"
-			decoding="async"
-			aria-hidden="true"
-			bind:this={roses[index]}
-		/>
-	{/each}
 </div>
 
 <style>
@@ -383,29 +370,5 @@
 		text-align: center;
 		text-shadow: 0 1px 10px color-mix(in oklab, black 45%, transparent);
 		pointer-events: none;
-	}
-
-	/* Roses grow into two corners of the screen as the envelope opens. */
-	.rose {
-		position: absolute;
-		z-index: 7;
-		width: min(46vw, 320px);
-		height: auto;
-		opacity: 0;
-		pointer-events: none;
-		filter: drop-shadow(0 8px 14px color-mix(in oklab, black 45%, transparent));
-	}
-
-	.rose-top {
-		top: -2%;
-		left: -4%;
-		transform-origin: 0 0;
-	}
-
-	.rose-bottom {
-		right: -4%;
-		bottom: -2%;
-		/* The cut-out blooms along its top and left edges; this corner needs it turned half a turn. */
-		rotate: 180deg;
 	}
 </style>

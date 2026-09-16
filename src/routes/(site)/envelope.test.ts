@@ -15,21 +15,11 @@ describe('openingPlan', () => {
 		);
 	});
 
-	it('lets the flowers bloom only once the flap has passed upright', () => {
+	it('fades the envelope only once the flap has passed upright', () => {
 		fc.assert(
 			fc.property(slow, (s) => {
-				const { flap, flowers } = openingPlan(s);
-				expect(flowers.delay).toBeGreaterThanOrEqual(flap.delay + flap.duration / 2);
-			})
-		);
-	});
-
-	it('fades the envelope once the flowers are half open, and not before they finish', () => {
-		fc.assert(
-			fc.property(slow, (s) => {
-				const { flowers, fade } = openingPlan(s);
-				expect(fade.delay).toBeGreaterThanOrEqual(flowers.delay + flowers.duration / 2);
-				expect(end(flowers)).toBeLessThanOrEqual(end(fade));
+				const { flap, fade } = openingPlan(s);
+				expect(fade.delay).toBeGreaterThanOrEqual(flap.delay + flap.duration / 2);
 			})
 		);
 	});
