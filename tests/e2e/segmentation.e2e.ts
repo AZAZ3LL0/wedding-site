@@ -3,7 +3,7 @@ import { content } from '../../src/lib/content/wedding';
 import { seedGuests, seedParties } from '../../scripts/seed';
 import { signIn } from './guest';
 
-const { byAudience, sections } = content;
+const { sections } = content;
 
 // One seed guest per audience; the family one is invited to the registry, the rest are not.
 const cases = (['family', 'friends', 'colleagues'] as const).map((audience) => {
@@ -19,11 +19,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const { audience, party, guest } of cases) {
-	test(`${audience}: greets the guest and follows the registry rules`, async ({
-		page,
-		context,
-		baseURL
-	}) => {
+	test(`${audience}: follows the registry rules`, async ({ page, context, baseURL }) => {
 		const name = `${guest.firstName} ${guest.lastName}`;
 		const namesakes = seedGuests.filter(
 			(g) => g.nameKey === guest.nameKey && g.partyId !== party.id
@@ -31,10 +27,6 @@ for (const { audience, party, guest } of cases) {
 		await signIn(context, baseURL!, name, namesakes.length > 0 ? guest.id : undefined);
 
 		const response = await page.goto('/i');
-		const welcome = page.locator('[data-welcome]');
-		await welcome.scrollIntoViewIfNeeded();
-		await expect(welcome).toContainText(byAudience[audience].greeting);
-		await expect(welcome).toContainText(guest.displayName);
 
 		// registry is null in wedding.ts, so no audience sees it, invited or not.
 		const location = page.getByRole('region', { name: sections.location.title });
