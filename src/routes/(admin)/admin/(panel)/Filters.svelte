@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { admin } from '$lib/content/admin';
 	import { AUDIENCE_OPTIONS, STATUS_OPTIONS, type Filters } from './filters';
 
@@ -59,7 +60,10 @@
 	>
 		{copy.apply}
 	</button>
-	<a href="/admin" class="min-h-10 px-2 py-2 text-sm text-slate-600 underline hover:text-slate-900">
+	<a
+		href={resolve('/admin')}
+		class="min-h-10 px-2 py-2 text-sm text-slate-600 underline hover:text-slate-900"
+	>
 		{copy.reset}
 	</a>
 </form>
