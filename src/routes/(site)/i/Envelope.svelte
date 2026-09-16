@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { motionTokens } from '$lib/actions/motion-tokens';
 	import type { ContentData } from '$lib/content/schema';
+	import { ScriptText } from '$lib/ui';
 	import { ENVELOPE_OPENED, openingPlan, rememberOpened } from './envelope';
 	import { scallopedEllipse } from './ornaments';
 
@@ -72,7 +73,7 @@
 
 	<div class="card" aria-hidden="true" bind:this={card}>
 		<div class="card-frame">
-			<span class="card-title">{envelope.title}</span>
+			<span class="card-title"><ScriptText text={envelope.title} /></span>
 		</div>
 	</div>
 
@@ -112,7 +113,7 @@
 
 	<div class="text" bind:this={text}>
 		<p class="eyebrow">{envelope.eyebrow}</p>
-		<p class="title" id="{id}-title">{envelope.title}</p>
+		<p class="title" id="{id}-title"><ScriptText text={envelope.title} /></p>
 	</div>
 
 	<!-- A pointer target only: keyboard and screen reader users get the labelled button below. -->
