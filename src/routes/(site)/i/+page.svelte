@@ -41,12 +41,7 @@
 			venue={content.venue}
 			hosts={content.hosts}
 		/>
-		<Invitation
-			invitation={content.invitation}
-			event={content.event}
-			labels={content.ui.countdown}
-			welcome={data.welcome}
-		/>
+		<Invitation event={content.event} labels={content.ui.countdown} />
 		<Location
 			registry={content.registry}
 			venue={content.venue}

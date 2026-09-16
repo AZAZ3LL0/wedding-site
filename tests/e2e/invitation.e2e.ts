@@ -22,7 +22,9 @@ test('invitation card shows the event from the content config', async ({ page })
 	await expect(card.getByText(content.venue.address)).toBeVisible();
 	await expect(card.getByText(content.venue.title)).toBeVisible();
 
-	await expect(page.getByText(content.invitation.dateLine)).toBeVisible();
+	// The date line and the greeting repeated the card, so they are gone from below it.
+	await expect(page.getByText(content.invitation.dateLine)).toHaveCount(0);
+	await expect(page.locator('[data-welcome]')).toHaveCount(0);
 	// The countdown aims at the local start in Astrakhan, not at the guest's time zone.
 	await expect(page.locator('time[datetime="2026-11-28T17:00:00+04:00"]')).toBeVisible();
 });
@@ -86,9 +88,11 @@ test('location section links the venue to the map and has no registry', async ({
 	await venue.scrollIntoViewIfNeeded();
 	await expect(venue.getByRole('heading', { name: content.venue.title })).toBeVisible();
 	await expect(venue.getByText(content.venue.address)).toBeVisible();
+	// The heading and the gathering time are on the card, not repeated here.
+	await expect(page.getByText(content.sections.location.eyebrow, { exact: true })).toHaveCount(0);
 	await expect(
-		venue.getByText(`${content.sections.location.venueStart} ${content.venue.startTime}`)
-	).toBeVisible();
+		page.getByText(`${content.sections.location.venueStart} ${content.venue.startTime}`)
+	).toHaveCount(0);
 
 	const link = venue.getByRole('link', { name: content.ui.map.open });
 	await expect(link).toHaveAttribute('href', content.venue.mapUrl);
