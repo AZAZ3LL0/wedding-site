@@ -29,7 +29,7 @@
 				{required}
 				{disabled}
 				bind:group={value}
-				class="h-5 w-5 accent-olive"
+				class="h-5 w-5 accent-accent"
 			/>
 			<span>{option.label}</span>
 		</label>

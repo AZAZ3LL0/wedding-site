@@ -16,8 +16,8 @@
 <Section variant="light" aria-labelledby="dress-code-title" class="pt-0">
 	<Reveal>
 		<div class="mx-auto flex max-w-md flex-col items-center gap-6 text-center">
-			<div class="text-olive"><Divider orientation="vertical" /></div>
-			<p class="eyebrow text-olive">{labels.eyebrow}</p>
+			<div class="text-accent"><Divider orientation="vertical" /></div>
+			<p class="eyebrow text-accent">{labels.eyebrow}</p>
 			<div id="dress-code-title">
 				<Heading level={2} script>{labels.title}</Heading>
 			</div>
@@ -35,7 +35,7 @@
 								style:background-color={color.hex}
 								aria-hidden="true"
 							></span>
-							<span class="text-xs tracking-[0.14em] text-olive uppercase">{color.name}</span>
+							<span class="text-xs tracking-[0.14em] text-accent uppercase">{color.name}</span>
 						</li>
 					{/each}
 				</ul>

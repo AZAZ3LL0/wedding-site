@@ -24,10 +24,10 @@ const primitives = [
 test('kitchen-sink applies design tokens and fonts', async ({ page }) => {
 	await page.goto('/kitchen-sink');
 
-	await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(244, 239, 228)');
-	await expect(page.locator('[data-token="--c-olive"]')).toHaveCSS(
+	await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(243, 235, 228)');
+	await expect(page.locator('[data-token="--c-accent"]')).toHaveCSS(
 		'background-color',
-		'rgb(110, 107, 60)'
+		'rgb(122, 30, 44)'
 	);
 
 	const loaded = await page.evaluate(async () => {

@@ -24,7 +24,7 @@
 				checked={values.includes(option.id)}
 				disabled={disabled || isAtLimit(values, option.id, max)}
 				onchange={() => (values = toggleValue(values, option.id, max))}
-				class="h-5 w-5 accent-olive"
+				class="h-5 w-5 accent-accent"
 			/>
 			<span>{option.label}</span>
 		</label>

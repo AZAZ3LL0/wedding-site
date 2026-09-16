@@ -7,7 +7,7 @@
 <div class="grid grid-cols-[auto_1fr] items-start gap-x-4">
 	<svg
 		viewBox="0 0 24 24"
-		class="h-8 w-8 text-olive"
+		class="h-8 w-8 text-accent"
 		fill="none"
 		stroke="currentColor"
 		stroke-width="1.5"
@@ -30,6 +30,6 @@
 	<div>
 		<p class="font-display text-2xl lining-nums tabular-nums">{time}</p>
 		<p class="font-medium">{title}</p>
-		<p class="text-sm text-olive">{caption}</p>
+		<p class="text-sm text-accent">{caption}</p>
 	</div>
 </div>

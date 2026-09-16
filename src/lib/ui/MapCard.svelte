@@ -26,13 +26,13 @@
 	{/if}
 	<div class="flex flex-col gap-2 p-5">
 		<h3 class="font-display text-2xl">{title}</h3>
-		<p class="text-sm text-olive">{address}</p>
+		<p class="text-sm text-accent">{address}</p>
 		<!-- eslint-disable svelte/no-navigation-without-resolve -- external map service, not an app route -->
 		<a
 			href={mapUrl}
 			target="_blank"
 			rel="noopener noreferrer"
-			class="self-start text-olive-deep underline underline-offset-4"
+			class="self-start text-accent-deep underline underline-offset-4"
 		>
 			{linkLabel}
 		</a>

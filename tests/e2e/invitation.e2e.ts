@@ -122,6 +122,6 @@ test('footer signs the invitation from the hosts', async ({ page }) => {
 
 	await expect(footer.getByText(content.sections.farewell.eyebrow)).toBeVisible();
 	await expect(footer.getByText(content.hosts)).toBeVisible();
-	// Ivory on olive-deep, the dark section variant.
-	await expect(footer.locator('section')).toHaveCSS('color', 'rgb(251, 248, 240)');
+	// Ivory on accent-deep, the dark section variant.
+	await expect(footer.locator('section')).toHaveCSS('color', 'rgb(251, 247, 242)');
 });

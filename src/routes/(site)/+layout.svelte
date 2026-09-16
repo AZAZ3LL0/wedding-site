@@ -26,7 +26,7 @@
 
 {#if music.enabled}
 	<!-- In the layout, so the track keeps playing when the guest moves between site pages. -->
-	<div class="fixed top-4 right-4 z-30 rounded-full bg-paper/85 text-olive-deep backdrop-blur-sm">
+	<div class="fixed top-4 right-4 z-30 rounded-full bg-paper/85 text-accent-deep backdrop-blur-sm">
 		<AudioToggle src={music.src} labels={data.content.ui.audio} />
 	</div>
 {/if}

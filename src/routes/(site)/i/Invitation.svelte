@@ -20,7 +20,7 @@
 				<span class="text-xl">{welcome.greeting}</span>
 				<span class="font-script text-4xl text-wine">{welcome.name}</span>
 			</p>
-			<p class="eyebrow text-olive">{invitation.eyebrow}</p>
+			<p class="eyebrow text-accent">{invitation.eyebrow}</p>
 			<div id="invitation-title">
 				<Heading level={2} script>{invitation.title}</Heading>
 			</div>
@@ -29,7 +29,7 @@
 				<span>{invitation.timeLine}</span>
 			</p>
 			<p class="max-w-[30ch] text-xl leading-relaxed">{invitation.text}</p>
-			<div class="mt-4 text-olive-deep">
+			<div class="mt-4 text-accent-deep">
 				<Countdown target={eventStart(event)} {labels} />
 			</div>
 		</div>

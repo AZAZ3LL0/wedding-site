@@ -6,9 +6,10 @@ export const colorTokens = [
 	'--c-paper',
 	'--c-ivory',
 	'--c-muted',
-	'--c-olive',
-	'--c-olive-deep',
-	'--c-wine'
+	'--c-accent',
+	'--c-accent-deep',
+	'--c-wine',
+	'--c-gold'
 ] as const;
 
 export const fontTokens = [

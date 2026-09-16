@@ -27,7 +27,7 @@
 	<Section variant="light">
 		<div class="mx-auto flex max-w-md flex-col gap-10">
 			<div class="flex flex-col items-center gap-4 text-center">
-				<p class="eyebrow text-olive">{thanks.eyebrow}</p>
+				<p class="eyebrow text-accent">{thanks.eyebrow}</p>
 				<Heading level={1} script>{title}</Heading>
 			</div>
 
@@ -58,27 +58,27 @@
 					<a
 						href={data.botLink}
 						rel="noreferrer"
-						class="inline-flex min-h-11 items-center justify-center rounded-token border border-olive px-8 py-3 font-medium text-olive-deep transition-colors duration-(--dur-fast) ease-out hover:bg-olive hover:text-ivory focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-olive"
+						class="inline-flex min-h-11 items-center justify-center rounded-token border border-accent px-8 py-3 font-medium text-accent-deep transition-colors duration-(--dur-fast) ease-out hover:bg-accent hover:text-ivory focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
 					>
 						{thanks.bot.cta}
 					</a>
 				</section>
 			{/if}
 
-			<div class="flex flex-col items-center gap-6 text-olive">
+			<div class="flex flex-col items-center gap-6 text-accent">
 				<Divider orientation="vertical" />
 				{#if data.canEdit}
 					<!-- Links, not Buttons: both navigate instead of submitting anything. -->
 					<a
 						href={resolve('/rsvp')}
-						class="inline-flex min-h-11 items-center justify-center rounded-token bg-olive px-8 py-3 font-medium text-ivory transition-colors duration-(--dur-fast) ease-out hover:bg-olive-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-olive"
+						class="inline-flex min-h-11 items-center justify-center rounded-token bg-accent px-8 py-3 font-medium text-ivory transition-colors duration-(--dur-fast) ease-out hover:bg-accent-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
 					>
 						{thanks.edit}
 					</a>
 				{/if}
 				<a
 					href={resolve('/i')}
-					class="text-olive-deep underline decoration-olive/40 underline-offset-4 hover:decoration-olive"
+					class="text-accent-deep underline decoration-accent/40 underline-offset-4 hover:decoration-accent"
 				>
 					{thanks.back}
 				</a>
