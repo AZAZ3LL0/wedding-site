@@ -37,7 +37,7 @@ const content: SubmitContent = {
 
 function setup() {
 	const telegram = new FakeTelegramClient();
-	return { telegram, deps: { db, telegram, adminChatId, menu: content.menu } };
+	return { telegram, deps: { db, telegram, adminChatId } };
 }
 
 async function newGuest() {
@@ -104,8 +104,6 @@ describe('rsvp.notify-admin handler', () => {
 			name,
 			partyTitle,
 			'Придёт: да',
-			'Горячее: Плов',
-			'Напитки: Чай, Сок',
 			'Аллергии: орехи',
 			'Комментарий: Приедем к шести',
 			'@petr_g',
@@ -113,6 +111,9 @@ describe('rsvp.notify-admin handler', () => {
 		]) {
 			expect(message?.text).toContain(part);
 		}
+		// The site no longer asks about dishes and drinks, so the notice does not list them.
+		expect(message?.text).not.toContain('Горячее');
+		expect(message?.text).not.toContain('Напитки');
 	});
 
 	it('queues a payload that passes the job schema, built from what submitRsvp returns', async () => {
