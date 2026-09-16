@@ -30,11 +30,38 @@ test('opens with a tap and hands focus to the invitation', async ({ page }) => {
 	await expect(coverHeading(page)).toBeVisible();
 });
 
+// The card's lace frame and flowers wait for the envelope to be on screen; they must still arrive.
+async function cardArt(page: Page) {
+	const card = page.locator('[data-card]');
+	return {
+		frame: await card.evaluate((el) => getComputedStyle(el).borderImageSource),
+		flower: await card.locator('.flower-top').evaluate((el) => getComputedStyle(el).backgroundImage)
+	};
+}
+
+test('dresses the card in its lace and flowers once opened, and at once on a return visit', async ({
+	page
+}) => {
+	await page.goto('/i');
+	await openButton(page).click();
+	await expect(envelope(page)).toBeHidden();
+	expect(await cardArt(page)).toEqual({
+		frame: expect.stringContaining('card-frame.webp'),
+		flower: expect.stringContaining('card-flower-top.webp')
+	});
+
+	await page.reload();
+	expect(await cardArt(page)).toEqual({
+		frame: expect.stringContaining('card-frame.webp'),
+		flower: expect.stringContaining('card-flower-top.webp')
+	});
+});
+
 test('opens from the keyboard', async ({ page }) => {
 	await page.goto('/i');
 	await expect(envelope(page)).toBeVisible();
 
-	// The seal is a pointer target only, so Tab lands on the labelled button.
+	// The seal itself is the labelled button, so Tab lands on it.
 	for (
 		let i = 0;
 		i < 5 && !(await openButton(page).evaluate((b) => b === document.activeElement));
