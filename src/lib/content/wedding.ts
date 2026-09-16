@@ -13,8 +13,8 @@ export const content = {
 		city: 'Астрахань'
 	},
 	envelope: {
-		eyebrow: 'Приглашение на Кыз Узату',
-		title: 'Алина',
+		eyebrow: 'Приглашение на',
+		title: 'Алина Кыз Узату',
 		monogram: 'Т',
 		open: 'Нажмите на печать'
 	},
@@ -38,19 +38,20 @@ export const content = {
 		address: 'г. Астрахань, Каспийская улица, 2Б',
 		startTime: '17:00',
 		endTime: 'TODO',
-		mapUrl:
-			'https://yandex.ru/maps/?text=%D0%90%D1%81%D1%82%D1%80%D0%B0%D1%85%D0%B0%D0%BD%D1%8C%2C%20%D0%9A%D0%B0%D1%81%D0%BF%D0%B8%D0%B9%D1%81%D0%BA%D0%B0%D1%8F%20%D1%83%D0%BB%D0%B8%D1%86%D0%B0%2C%202%D0%91',
+		// The venue's own card: a search by the address text lands on a different Каспийская, 4А.
+		mapUrl: 'https://2gis.ru/astrakhan/firm/70000001047661941',
 		photos: []
 	},
 	timeline: [],
 	dressCode: {
 		text: 'Следовать дресс-коду не обязательно: мы в любом случае будем рады вас видеть',
-		// TODO: replace the sample palette with the real one
+		// Olive Green, Sage Green, Butter Yellow, Burnt Rose, Rich Mahogany.
 		palette: [
-			{ hex: '#6e6b3c', name: 'олива' },
-			{ hex: '#7a1e2c', name: 'бордо' },
-			{ hex: '#ebe4d4', name: 'молоко' },
-			{ hex: '#4a3328', name: 'шоколад' }
+			{ hex: '#68662c', name: 'оливковый' },
+			{ hex: '#b5b4a0', name: 'шалфей' },
+			{ hex: '#f6edc9', name: 'сливочный' },
+			{ hex: '#8f3a4a', name: 'пыльная роза' },
+			{ hex: '#3c0606', name: 'махагон' }
 		]
 	},
 	gifts: null,
@@ -151,8 +152,8 @@ export const content = {
 		map: { open: 'Открыть на карте' }
 	},
 	byAudience: {
-		family: { label: 'родные', greeting: 'TODO', address: 'ты', showRegistry: true },
-		friends: { label: 'друзья', greeting: 'TODO', address: 'ты', showRegistry: false },
-		colleagues: { label: 'коллеги', greeting: 'TODO', address: 'вы', showRegistry: false }
+		family: { label: 'родные', greeting: 'Ждём тебя,', address: 'ты', showRegistry: true },
+		friends: { label: 'друзья', greeting: 'Ждём тебя,', address: 'ты', showRegistry: false },
+		colleagues: { label: 'коллеги', greeting: 'Ждём вас,', address: 'вы', showRegistry: false }
 	}
 } satisfies Content;
