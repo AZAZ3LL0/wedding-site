@@ -20,7 +20,7 @@
 
 		<div class="card">
 			<div class="frame">
-				<p class="eyebrow text-olive">{cover.eyebrow}</p>
+				<p class="eyebrow text-accent">{cover.eyebrow}</p>
 				<div class="text-wine">
 					<Heading level={1} script>{cover.title}</Heading>
 				</div>
@@ -99,10 +99,10 @@
 		/* Striped paper border from the printed card, drawn without an image request. */
 		background:
 			linear-gradient(var(--c-ivory), var(--c-ivory)) padding-box,
-			repeating-linear-gradient(90deg, var(--c-olive) 0 3px, var(--c-ivory) 3px 9px) border-box;
+			repeating-linear-gradient(90deg, var(--c-accent) 0 3px, var(--c-ivory) 3px 9px) border-box;
 		box-shadow:
-			0 18px 40px color-mix(in oklab, var(--c-olive-deep) 20%, transparent),
-			0 2px 6px color-mix(in oklab, var(--c-olive-deep) 14%, transparent);
+			0 18px 40px color-mix(in oklab, var(--c-accent-deep) 20%, transparent),
+			0 2px 6px color-mix(in oklab, var(--c-accent-deep) 14%, transparent);
 	}
 
 	.frame {
@@ -111,8 +111,8 @@
 		align-items: center;
 		gap: 1rem;
 		padding: 2.25rem 1.25rem 4.5rem;
-		border: 1px solid var(--c-olive);
-		outline: 1px solid color-mix(in oklab, var(--c-olive) 35%, transparent);
+		border: 1px solid var(--c-accent);
+		outline: 1px solid color-mix(in oklab, var(--c-accent) 35%, transparent);
 		outline-offset: -6px;
 		text-align: center;
 	}
@@ -129,7 +129,7 @@
 		border-radius: 50%;
 		background: var(--c-paper);
 		box-shadow:
-			0 10px 22px color-mix(in oklab, var(--c-olive-deep) 28%, transparent),
+			0 10px 22px color-mix(in oklab, var(--c-accent-deep) 28%, transparent),
 			inset 0 0 0 1px color-mix(in oklab, var(--c-muted) 35%, transparent);
 		rotate: -6deg;
 	}
@@ -183,7 +183,7 @@
 	}
 
 	.pocket-body {
-		fill: var(--c-olive);
+		fill: var(--c-accent);
 	}
 
 	.pocket-fold {
@@ -196,7 +196,7 @@
 
 	.pocket-edge {
 		fill: none;
-		stroke: var(--c-olive-deep);
+		stroke: var(--c-accent-deep);
 		stroke-width: 2;
 		vector-effect: non-scaling-stroke;
 	}

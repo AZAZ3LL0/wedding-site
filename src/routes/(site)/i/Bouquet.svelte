@@ -27,8 +27,8 @@
 			<stop offset="1" style:stop-color="color-mix(in oklab, var(--c-wine) 80%, white)" />
 		</radialGradient>
 	</defs>
-	<path d="M100 200C80 160 60 130 30 120 60 118 90 140 100 200" style:fill="var(--c-olive)" />
-	<path d="M110 205C130 170 160 150 190 150 160 140 120 160 110 205" style:fill="var(--c-olive)" />
+	<path d="M100 200C80 160 60 130 30 120 60 118 90 140 100 200" style:fill="var(--c-accent)" />
+	<path d="M110 205C130 170 160 150 190 150 160 140 120 160 110 205" style:fill="var(--c-accent)" />
 	{#each shown as [x, y, r, rotation] (`${x}-${y}`)}
 		<g transform="translate({x} {y}) rotate({rotation})">
 			{#each { length: 8 }, i (i)}

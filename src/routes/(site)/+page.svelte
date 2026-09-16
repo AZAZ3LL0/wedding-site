@@ -33,7 +33,7 @@
 	<Section variant="light" class="w-full">
 		<div class="mx-auto flex max-w-sm flex-col gap-10">
 			<div class="flex flex-col items-center gap-4 text-center">
-				<p class="eyebrow text-olive">{entry.eyebrow}</p>
+				<p class="eyebrow text-accent">{entry.eyebrow}</p>
 				<div id="entry-title">
 					<Heading level={1} script>{entry.title}</Heading>
 				</div>

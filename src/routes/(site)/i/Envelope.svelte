@@ -148,7 +148,7 @@
 		z-index: 50;
 		display: none;
 		overflow: hidden;
-		background: var(--c-olive-deep);
+		background: var(--c-accent-deep);
 	}
 
 	@media (orientation: landscape) {
@@ -168,7 +168,7 @@
 		}
 	}
 
-	/* Velvet pile: a tiny noise tile blended over every olive surface. */
+	/* Velvet pile: a tiny noise tile blended over every accent surface. */
 	.envelope::after {
 		content: '';
 		position: absolute;
@@ -185,8 +185,8 @@
 		inset: 0;
 		background: radial-gradient(
 			ellipse at 50% 35%,
-			color-mix(in oklab, var(--c-olive-deep) 85%, var(--c-olive)),
-			color-mix(in oklab, var(--c-olive-deep) 75%, black)
+			color-mix(in oklab, var(--c-accent-deep) 85%, var(--c-accent)),
+			color-mix(in oklab, var(--c-accent-deep) 75%, black)
 		);
 	}
 
@@ -201,7 +201,7 @@
 		border: 12px solid transparent;
 		background:
 			linear-gradient(var(--c-ivory), var(--c-ivory)) padding-box,
-			repeating-linear-gradient(90deg, var(--c-olive) 0 3px, var(--c-ivory) 3px 9px) border-box;
+			repeating-linear-gradient(90deg, var(--c-accent) 0 3px, var(--c-ivory) 3px 9px) border-box;
 	}
 
 	.card-frame {
@@ -210,7 +210,7 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		border: 1px solid var(--c-olive);
+		border: 1px solid var(--c-accent);
 		color: var(--c-wine);
 		text-align: center;
 	}
@@ -233,9 +233,9 @@
 		clip-path: polygon(0 5%, 50% calc(var(--apex) + 8px), 100% 5%, 100% 100%, 0 100%);
 		background: linear-gradient(
 			90deg,
-			color-mix(in oklab, var(--c-olive) 88%, black),
-			var(--c-olive) 50%,
-			color-mix(in oklab, var(--c-olive) 85%, black)
+			color-mix(in oklab, var(--c-accent) 88%, black),
+			var(--c-accent) 50%,
+			color-mix(in oklab, var(--c-accent) 85%, black)
 		);
 	}
 
@@ -244,8 +244,8 @@
 		inset: 0;
 		clip-path: polygon(0 100%, 50% calc(var(--apex) + 7svh), 100% 100%);
 		background: linear-gradient(
-			color-mix(in oklab, var(--c-olive) 90%, var(--c-ivory)),
-			color-mix(in oklab, var(--c-olive) 88%, black)
+			color-mix(in oklab, var(--c-accent) 90%, var(--c-ivory)),
+			color-mix(in oklab, var(--c-accent) 88%, black)
 		);
 	}
 
@@ -262,8 +262,8 @@
 		inset: 0;
 		clip-path: polygon(0 0, 100% 0, 50% var(--apex));
 		background: linear-gradient(
-			color-mix(in oklab, var(--c-olive) 95%, black),
-			color-mix(in oklab, var(--c-olive) 92%, var(--c-ivory)) var(--apex)
+			color-mix(in oklab, var(--c-accent) 95%, black),
+			color-mix(in oklab, var(--c-accent) 92%, var(--c-ivory)) var(--apex)
 		);
 	}
 
@@ -290,16 +290,16 @@
 	}
 
 	.lace-thread {
-		fill: color-mix(in oklab, var(--c-olive) 85%, var(--c-ivory));
+		fill: color-mix(in oklab, var(--c-accent) 85%, var(--c-ivory));
 	}
 
 	.lace-hole {
-		fill: var(--c-olive-deep);
+		fill: var(--c-accent-deep);
 	}
 
 	.lace-stitch {
 		fill: none;
-		stroke: var(--c-olive-deep);
+		stroke: var(--c-accent-deep);
 		stroke-width: 1.1;
 	}
 

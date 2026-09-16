@@ -8,7 +8,7 @@
 	role={kind === 'error' ? 'alert' : 'status'}
 	class={[
 		'rounded-token px-4 py-3 text-sm shadow-sm',
-		kind === 'ok' ? 'bg-olive-deep text-ivory' : 'bg-wine text-ivory'
+		kind === 'ok' ? 'bg-accent-deep text-ivory' : 'bg-wine text-ivory'
 	]}
 >
 	{text}

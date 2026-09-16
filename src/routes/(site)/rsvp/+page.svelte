@@ -36,7 +36,7 @@
 	<Section variant="light">
 		<div class="mx-auto flex max-w-md flex-col gap-10">
 			<div class="flex flex-col items-center gap-4 text-center">
-				<p class="eyebrow text-olive">{rsvp.eyebrow}</p>
+				<p class="eyebrow text-accent">{rsvp.eyebrow}</p>
 				<div id="rsvp-title">
 					<Heading level={1} script>{rsvp.title}</Heading>
 				</div>
@@ -165,7 +165,7 @@
 									{/snippet}
 								</Field>
 
-								<div class="companion-fields flex flex-col gap-6 border-l-2 border-olive/30 pl-5">
+								<div class="companion-fields flex flex-col gap-6 border-l-2 border-accent/30 pl-5">
 									<Field
 										label={rsvp.companionFirstName}
 										error={form?.error === 'companionNameRequired'
