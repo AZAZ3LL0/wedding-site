@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { ContentData } from '$lib/content/schema';
 	import { dateParts } from '$lib/content/event';
-	import { Heading } from '$lib/ui';
+	import { Heading, ScriptText } from '$lib/ui';
 	import Bouquet from './Bouquet.svelte';
 	import { scallopedEllipse } from './ornaments';
 
@@ -22,7 +22,7 @@
 			<div class="frame">
 				<p class="eyebrow text-accent">{cover.eyebrow}</p>
 				<div class="text-wine">
-					<Heading level={1} script>{cover.title}</Heading>
+					<Heading level={1} script><ScriptText text={cover.title} /></Heading>
 				</div>
 				<p class="max-w-[28ch]">{cover.text}</p>
 			</div>
