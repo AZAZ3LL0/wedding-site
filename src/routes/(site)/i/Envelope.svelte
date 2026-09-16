@@ -4,8 +4,7 @@
 	import { motionTokens } from '$lib/actions/motion-tokens';
 	import type { ContentData } from '$lib/content/schema';
 	import { ScriptText } from '$lib/ui';
-	import { ENVELOPE_OPENED, openingPlan, rememberOpened } from './envelope';
-	import { scallopedEllipse } from './ornaments';
+	import { ENVELOPE_ART, ENVELOPE_OPENED, openingPlan, rememberOpened } from './envelope';
 
 	type Props = {
 		envelope: ContentData['envelope'];
@@ -17,21 +16,38 @@
 	let { envelope, oncover, onopen }: Props = $props();
 
 	const id = $props.id();
-	const ring = scallopedEllipse(50, 62.5, 40, 52, 28, 3.6);
 
 	let root: HTMLElement;
+	let heading: HTMLElement;
+	let hint: HTMLElement;
 	let seal: HTMLElement;
-	let text: HTMLElement;
-	let button: HTMLElement;
 	let flap: HTMLElement;
 	let card: HTMLElement;
-	let opening = false;
+	let roses: HTMLElement[] = $state([]);
+	let opening = $state(false);
+	// Past upright the flap lies behind the envelope and the card shows, rising in front of it.
+	let flapOpen = $state(false);
+	let artReady = $state(false);
+
+	function releaseArt() {
+		artReady = true;
+		document.documentElement.classList.add(ENVELOPE_ART);
+	}
 
 	onMount(() => {
 		// Tells the failsafe in app.html that JS is alive; otherwise it hides the envelope.
 		document.documentElement.dataset.revealReady = '';
 		// CSS decides visibility (JS, reduced motion, already opened), the component only follows it.
-		oncover?.(getComputedStyle(root).display !== 'none');
+		const covering = getComputedStyle(root).display !== 'none';
+		oncover?.(covering);
+		if (!covering) return releaseArt();
+		// Decoding the preloaded photo resolves once the envelope can paint; a failure still lets go.
+		const photo = new Image();
+		photo.src = '/images/envelope.webp';
+		photo
+			.decode()
+			.catch(() => undefined)
+			.finally(releaseArt);
 	});
 
 	function finish() {
@@ -48,101 +64,122 @@
 
 		const { duration, ease } = motionTokens();
 		const plan = openingPlan(duration);
-		const fadeOut = { opacity: [1, 0] };
-		const rise = card.offsetTop - window.innerHeight * 0.08;
 
-		animate(seal, { opacity: [1, 0], scale: [1, 0.7] }, { ...plan.seal, ease: 'easeIn' });
-		animate([text, button], fadeOut, plan.seal);
+		animate([heading, hint], { opacity: [1, 0] }, plan.seal);
+		// The guest presses the wax in, and it gives.
+		animate(
+			seal,
+			{ transform: ['scale(1)', 'scale(0.9)', 'scale(1.03)'] },
+			{ ...plan.seal, ease: 'easeInOut' }
+		);
+		// The wax stays stuck to the flap, as real wax does: the flap carries its own copy of the seal,
+		// so the button hands over to it the moment the flap starts to lift.
+		setTimeout(() => (seal.style.visibility = 'hidden'), plan.flap.delay * 1000);
 		animate(
 			flap,
-			{ transform: ['perspective(1600px) rotateX(0deg)', 'perspective(1600px) rotateX(-178deg)'] },
-			{ ...plan.flap, ease: [0.55, 0, 0.3, 1] }
+			{ transform: ['perspective(1400px) rotateX(0deg)', 'perspective(1400px) rotateX(-178deg)'] },
+			{ ...plan.flap, ease: [0.6, 0, 0.3, 1] }
 		);
+		setTimeout(() => (flapOpen = true), (plan.flap.delay + plan.flap.duration / 2) * 1000);
 		animate(
 			card,
-			{ transform: ['translateY(0)', `translateY(${-rise}px)`] },
+			{ transform: ['translateY(0) scale(0.96)', 'translateY(-78%) scale(1.04)'] },
 			{ ...plan.card, ease }
 		);
-		await animate(root, fadeOut, { ...plan.fade, ease: 'easeOut' }).finished.catch(() => undefined);
+		roses.forEach((rose, index) =>
+			animate(
+				rose,
+				{ opacity: [0, 1], transform: ['scale(0.4) rotate(-14deg)', 'scale(1) rotate(0deg)'] },
+				{ ...plan.flowers, delay: plan.flowers.delay + index * 0.18, ease }
+			)
+		);
+		await animate(root, { opacity: [1, 0] }, { ...plan.fade, ease: 'easeOut' }).finished.catch(
+			() => undefined
+		);
 		finish();
 	}
 </script>
 
-<div class="envelope" role="dialog" aria-modal="true" aria-labelledby="{id}-title" bind:this={root}>
-	<div class="inside" aria-hidden="true"></div>
+<!-- Fresh wax over the rose pressed into the photo, carrying the hosts' monogram instead. -->
+{#snippet wax(place: string)}
+	<span class="wax {place}" aria-hidden="true">
+		<span class="monogram"><ScriptText text={envelope.monogram} /></span>
+	</span>
+{/snippet}
 
-	<div class="card" aria-hidden="true" bind:this={card}>
-		<div class="card-frame">
-			<span class="card-title"><ScriptText text={envelope.title} /></span>
-		</div>
-	</div>
+<div
+	class="envelope"
+	class:opening
+	class:flap-open={flapOpen}
+	role="dialog"
+	aria-modal="true"
+	aria-labelledby="{id}-title"
+	bind:this={root}
+>
+	<div class="backdrop" aria-hidden="true"></div>
 
-	<div class="pocket" aria-hidden="true">
-		<div class="pocket-sides"></div>
-		<div class="pocket-bottom"></div>
-	</div>
-
-	<div class="flap" aria-hidden="true" bind:this={flap}>
-		<div class="flap-body"></div>
-		<svg class="lace lace-left">
-			<defs>
-				<pattern id="{id}-lace" width="26" height="36" patternUnits="userSpaceOnUse">
-					<rect class="lace-thread" width="26" height="11" />
-					<rect class="lace-hole" y="1.5" width="26" height="0.8" opacity=".4" />
-					<path class="lace-thread" d="M0 10A13 15 0 0 0 26 10Z" />
-					<path class="lace-stitch" d="M4.5 12A8.5 10 0 0 0 21.5 12" />
-					<circle class="lace-hole" cx="6.5" cy="6" r="1.5" />
-					<circle class="lace-hole" cx="19.5" cy="6" r="1.5" />
-					<circle class="lace-hole" cx="13" cy="6" r=".9" />
-					<circle class="lace-hole" cx="13" cy="18" r="2.4" />
-					<circle class="lace-hole" cx="8" cy="14.5" r="1" />
-					<circle class="lace-hole" cx="18" cy="14.5" r="1" />
-					<circle class="lace-thread" cx="2.2" cy="18.5" r="1.4" />
-					<circle class="lace-thread" cx="7" cy="23.5" r="1.4" />
-					<circle class="lace-thread" cx="13" cy="25.6" r="1.4" />
-					<circle class="lace-thread" cx="19" cy="23.5" r="1.4" />
-					<circle class="lace-thread" cx="23.8" cy="18.5" r="1.4" />
-				</pattern>
-			</defs>
-			<rect width="100%" height="36" fill="url(#{id}-lace)" />
-		</svg>
-		<svg class="lace lace-right">
-			<rect width="100%" height="36" fill="url(#{id}-lace)" />
-		</svg>
-	</div>
-
-	<div class="text" bind:this={text}>
+	<div class="heading" bind:this={heading}>
 		<p class="eyebrow">{envelope.eyebrow}</p>
 		<p class="title" id="{id}-title"><ScriptText text={envelope.title} /></p>
 	</div>
 
-	<!-- A pointer target only: keyboard and screen reader users get the labelled button below. -->
-	<button
-		type="button"
-		class="seal"
-		tabindex="-1"
-		aria-hidden="true"
-		onclick={open}
-		bind:this={seal}
-	>
-		<svg viewBox="0 0 100 125">
-			<path class="seal-ring" d={ring} />
-			<path class="seal-ring-shadow" d={ring} transform="translate(.7 .9)" />
-			<ellipse class="seal-inner" cx="50" cy="62.5" rx="33" ry="45" />
-		</svg>
-		<span class="monogram">{envelope.monogram}</span>
-	</button>
+	<div class="stage">
+		<div class="inside" aria-hidden="true"></div>
 
-	<button type="button" class="open eyebrow" onclick={open} bind:this={button}>
-		{envelope.open}
-	</button>
+		<div class="card" aria-hidden="true" bind:this={card}>
+			<img
+				src={artReady ? '/images/invitation-card.webp' : undefined}
+				alt=""
+				width="540"
+				height="957"
+				decoding="async"
+			/>
+		</div>
+
+		<div class="body" aria-hidden="true"></div>
+
+		<div class="flap" aria-hidden="true" bind:this={flap}>
+			<div class="flap-front">
+				{@render wax('flap-wax')}
+			</div>
+			<div class="flap-back"></div>
+		</div>
+
+		<!-- The seal is the one control: pointer, keyboard and screen readers all open it here. -->
+		<button type="button" class="seal" aria-label={envelope.open} onclick={open} bind:this={seal}>
+			<img src="/images/envelope-seal.webp" alt="" width="160" height="160" />
+			{@render wax('seal-wax')}
+		</button>
+	</div>
+
+	<p class="hint eyebrow" aria-hidden="true" bind:this={hint}>{envelope.open}</p>
+
+	{#each ['top', 'bottom'] as corner, index (corner)}
+		<img
+			class="rose rose-{corner}"
+			src={artReady ? '/images/roses.webp' : undefined}
+			alt=""
+			width="406"
+			height="418"
+			decoding="async"
+			aria-hidden="true"
+			bind:this={roses[index]}
+		/>
+	{/each}
 </div>
 
 <style>
 	.envelope {
-		/* Where the flap tip meets the pocket; everything else is placed from this line. */
-		--apex: 52svh;
-		--lace-angle: atan2(var(--apex), 50vw);
+		/*
+		 * The photo is 735 by 490. Its layers are cut along the lace in percentages of that frame:
+		 * the flap runs from the top corners down each side to a tip under the seal.
+		 */
+		--flap: polygon(0 0, 100% 0, 100% 28.57%, 50.2% 86.12%, 0 26.94%);
+		--stage-w: min(135vw, 86svh * 1.5, 900px);
+		/* All four photo edges melt into the backdrop, so the rectangle of the photo never shows. */
+		--photo-fade:
+			linear-gradient(transparent, black 16%, black 84%, transparent),
+			linear-gradient(90deg, transparent, black 9%, black 91%, transparent);
 
 		position: fixed;
 		inset: 0;
@@ -150,12 +187,6 @@
 		display: none;
 		overflow: hidden;
 		background: var(--c-accent-deep);
-	}
-
-	@media (orientation: landscape) {
-		.envelope {
-			--apex: 60svh;
-		}
 	}
 
 	/* Shown only when JS runs, motion is welcome and the guest has not opened it in this tab. */
@@ -169,85 +200,89 @@
 		}
 	}
 
-	/* Velvet pile: a tiny noise tile blended over every accent surface. */
-	.envelope::after {
-		content: '';
+	/* The same photo, blurred and dimmed, fills whatever the envelope does not cover. */
+	.backdrop {
+		position: absolute;
+		inset: -8%;
+		background: url('/images/envelope.webp') center / cover;
+		filter: blur(28px) brightness(0.72) saturate(1.1);
+	}
+
+	.heading {
+		position: absolute;
+		top: max(6svh, calc(50svh - var(--stage-w) / 3 - 9.5rem));
+		right: 0;
+		left: 0;
+		z-index: 6;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.25rem;
+		color: var(--c-ivory);
+		text-align: center;
+		text-shadow: 0 2px 14px color-mix(in oklab, black 45%, transparent);
+	}
+
+	.title {
+		font-family: var(--font-script);
+		font-size: clamp(3.6rem, 16vw, 5.5rem);
+		line-height: 1.05;
+		color: color-mix(in oklab, var(--c-gold) 55%, var(--c-ivory));
+	}
+
+	/* Wider than a phone screen on purpose, so it is centred explicitly: a grid would pin its left edge. */
+	.stage {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: var(--stage-w);
+		aspect-ratio: 735 / 490;
+		translate: -50% -50%;
+	}
+
+	/* The photo layers share one frame and one edge fade. */
+	.inside,
+	.body {
 		position: absolute;
 		inset: 0;
-		z-index: 6;
-		pointer-events: none;
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .4 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
-		mix-blend-mode: overlay;
-		opacity: 0.5;
+		mask: var(--photo-fade);
+		mask-composite: intersect;
 	}
 
 	.inside {
-		position: absolute;
-		inset: 0;
+		clip-path: var(--flap);
 		background: radial-gradient(
-			ellipse at 50% 35%,
-			color-mix(in oklab, var(--c-accent-deep) 85%, var(--c-accent)),
-			color-mix(in oklab, var(--c-accent-deep) 75%, black)
+			ellipse 60% 70% at 50% 20%,
+			color-mix(in oklab, var(--c-accent-deep) 70%, black),
+			color-mix(in oklab, var(--c-accent-deep) 40%, black)
 		);
 	}
 
+	/* The invitation waits in the pocket, between the inside and the front of the envelope. */
 	.card {
 		position: absolute;
 		z-index: 1;
-		top: calc(var(--apex) * 0.72);
+		top: 5%;
 		left: 50%;
-		width: min(78vw, 360px);
-		aspect-ratio: 5 / 7;
-		translate: -50% 0;
-		border: 12px solid transparent;
-		background:
-			linear-gradient(var(--c-ivory), var(--c-ivory)) padding-box,
-			repeating-linear-gradient(90deg, var(--c-accent) 0 3px, var(--c-ivory) 3px 9px) border-box;
+		width: 28%;
+		margin-left: -14%;
+		/* Hidden in the pocket until the flap is out of the way: it would show through the faded edges. */
+		opacity: 0;
+		transform-origin: 50% 100%;
+		filter: drop-shadow(0 10px 18px color-mix(in oklab, black 45%, transparent));
 	}
 
-	.card-frame {
-		display: flex;
-		height: 100%;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		border: 1px solid var(--c-accent);
-		color: var(--c-wine);
-		text-align: center;
+	.card img {
+		display: block;
+		width: 100%;
+		height: auto;
 	}
 
-	.card-title {
-		font-family: var(--font-script);
-		font-size: clamp(3rem, 14vw, 4.25rem);
-		line-height: 1;
-	}
-
-	.pocket {
-		position: absolute;
-		inset: 0;
+	.body {
 		z-index: 2;
-	}
-
-	.pocket-sides {
-		position: absolute;
-		inset: 0;
-		clip-path: polygon(0 5%, 50% calc(var(--apex) + 8px), 100% 5%, 100% 100%, 0 100%);
-		background: linear-gradient(
-			90deg,
-			color-mix(in oklab, var(--c-accent) 88%, black),
-			var(--c-accent) 50%,
-			color-mix(in oklab, var(--c-accent) 85%, black)
-		);
-	}
-
-	.pocket-bottom {
-		position: absolute;
-		inset: 0;
-		clip-path: polygon(0 100%, 50% calc(var(--apex) + 7svh), 100% 100%);
-		background: linear-gradient(
-			color-mix(in oklab, var(--c-accent) 90%, var(--c-ivory)),
-			color-mix(in oklab, var(--c-accent) 88%, black)
-		);
+		background: url('/images/envelope.webp') center / 100% 100%;
+		/* Everything below the flap: the V cut out of the photo. */
+		clip-path: polygon(0 26.94%, 50.2% 86.12%, 100% 28.57%, 100% 100%, 0 100%);
 	}
 
 	.flap {
@@ -255,182 +290,164 @@
 		inset: 0;
 		z-index: 3;
 		transform-origin: 50% 0;
-		filter: drop-shadow(0 14px 18px color-mix(in oklab, black 45%, transparent));
+		/* No filter here: a filter flattens 3D, and the back of the flap would never turn around. */
+		transform-style: preserve-3d;
 	}
 
-	.flap-body {
+	.flap-open .flap {
+		z-index: 0;
+	}
+
+	.flap-open .card {
+		opacity: 1;
+	}
+
+	.flap-front,
+	.flap-back {
 		position: absolute;
 		inset: 0;
-		clip-path: polygon(0 0, 100% 0, 50% var(--apex));
+		clip-path: var(--flap);
+		backface-visibility: hidden;
+	}
+
+	.flap-front {
+		background: url('/images/envelope.webp') center / 100% 100%;
+		mask: var(--photo-fade);
+		mask-composite: intersect;
+	}
+
+	/* Seen once the flap has swung past upright: plain felt, darker than the lace side. */
+	.flap-back {
+		transform: rotateX(180deg);
 		background: linear-gradient(
-			color-mix(in oklab, var(--c-accent) 95%, black),
-			color-mix(in oklab, var(--c-accent) 92%, var(--c-ivory)) var(--apex)
+			color-mix(in oklab, var(--c-accent) 70%, black),
+			color-mix(in oklab, var(--c-accent-deep) 80%, black)
 		);
-	}
-
-	/* Lace runs along both flap edges and stops at the tip, whatever the screen proportions. */
-	.lace {
-		position: absolute;
-		top: -5px;
-		width: calc(50vw / cos(var(--lace-angle)) + 14px);
-		height: 36px;
-		overflow: visible;
-		filter: drop-shadow(0 3px 2.5px color-mix(in oklab, black 55%, transparent));
-	}
-
-	.lace-left {
-		left: -14px;
-		transform-origin: 14px 5px;
-		rotate: var(--lace-angle);
-	}
-
-	.lace-right {
-		right: -14px;
-		transform-origin: calc(100% - 14px) 5px;
-		rotate: calc(-1 * var(--lace-angle));
-	}
-
-	.lace-thread {
-		fill: color-mix(in oklab, var(--c-accent) 85%, var(--c-ivory));
-	}
-
-	.lace-hole {
-		fill: var(--c-accent-deep);
-	}
-
-	.lace-stitch {
-		fill: none;
-		stroke: var(--c-accent-deep);
-		stroke-width: 1.1;
-	}
-
-	.text {
-		position: absolute;
-		z-index: 4;
-		top: calc(var(--apex) * 0.42);
-		right: 0;
-		left: 0;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.35rem;
-		translate: 0 -50%;
-		color: var(--c-ivory);
-		text-align: center;
-		text-shadow: 0 1px 12px color-mix(in oklab, black 35%, transparent);
-		pointer-events: none;
-	}
-
-	.open {
-		color: var(--c-ivory);
-	}
-
-	.title {
-		font-family: var(--font-script);
-		font-size: clamp(3.5rem, 15vw, 5.5rem);
-		line-height: 1.05;
 	}
 
 	.seal {
 		position: absolute;
-		z-index: 5;
-		top: var(--apex);
-		left: 50%;
-		display: grid;
-		width: clamp(92px, 24vw, 132px);
-		aspect-ratio: 4 / 5;
-		place-items: center;
+		z-index: 4;
+		top: 56.33%;
+		left: 50.2%;
+		width: 21.8%;
+		aspect-ratio: 1;
 		translate: -50% -50%;
 		border-radius: 50%;
 		cursor: pointer;
-		background: radial-gradient(
-			ellipse at 36% 28%,
-			white,
-			var(--c-ivory) 25%,
-			var(--c-paper) 55%,
-			color-mix(in oklab, var(--c-paper) 85%, var(--c-muted))
-		);
-		box-shadow:
-			0 12px 22px color-mix(in oklab, black 50%, transparent),
-			0 2px 3px color-mix(in oklab, black 35%, transparent),
-			inset -5px -8px 12px color-mix(in oklab, var(--c-muted) 30%, transparent),
-			inset 5px 6px 10px color-mix(in oklab, white 85%, transparent);
 		transition: scale var(--dur-fast) var(--ease-out);
 	}
 
-	.seal:hover {
-		scale: 1.04;
-	}
-
-	.seal svg {
-		position: absolute;
-		inset: 9%;
-		width: 82%;
-		height: 82%;
-	}
-
-	.seal-ring {
-		fill: none;
-		stroke: white;
-		stroke-width: 1.6;
-	}
-
-	.seal-ring-shadow {
-		fill: none;
-		stroke: var(--c-muted);
-		stroke-opacity: 0.5;
-		stroke-width: 1;
-	}
-
-	.seal-inner {
-		fill: none;
-		stroke: color-mix(in oklab, var(--c-paper) 70%, var(--c-muted));
-		stroke-width: 0.7;
-	}
-
-	/* Embossed: the letter is the seal's own colour, lit from the top left. */
-	.monogram {
-		position: relative;
-		translate: 0 4%;
-		font-family: var(--font-script);
-		font-size: clamp(2.6rem, 9vw, 3.6rem);
-		line-height: 1;
-		color: var(--c-paper);
-		text-shadow:
-			-1px -1px 0 white,
-			1.5px 1.5px 1.5px color-mix(in oklab, var(--c-muted) 70%, transparent);
-	}
-
-	.open {
-		position: absolute;
-		z-index: 5;
-		top: calc(var(--apex) + (100svh - var(--apex)) * 0.52);
-		left: 50%;
-		padding: 0.75rem 1rem;
-		translate: -50% 0;
-		white-space: nowrap;
-		cursor: pointer;
-		text-shadow: 0 1px 10px color-mix(in oklab, black 40%, transparent);
-	}
-
-	.open::after {
-		content: '';
+	.seal img {
 		display: block;
-		height: 1px;
-		margin-top: 0.4rem;
-		background: currentColor;
-		opacity: 0.5;
-		transform: scaleX(0.3);
-		transition: transform var(--dur-slow) var(--ease-out);
+		width: 100%;
+		height: 100%;
+		filter: drop-shadow(0 8px 12px color-mix(in oklab, black 55%, transparent));
 	}
 
-	.open:hover::after,
-	.open:focus-visible::after {
-		transform: scaleX(1);
+	.seal:hover {
+		scale: 1.05;
 	}
 
-	.open:focus-visible {
-		outline: 2px solid var(--c-ivory);
-		outline-offset: 2px;
+	.seal:focus-visible {
+		outline: 2px solid var(--c-gold);
+		outline-offset: 6px;
+	}
+
+	/* A soft gold breath around the seal until it is pressed, so the guest knows where to tap. */
+	@media (prefers-reduced-motion: no-preference) {
+		.seal::after {
+			content: '';
+			position: absolute;
+			inset: 6%;
+			border-radius: 50%;
+			pointer-events: none;
+			animation: breathe 2.4s ease-in-out infinite;
+		}
+
+		.opening .seal::after {
+			animation: none;
+		}
+	}
+
+	@keyframes breathe {
+		0%,
+		100% {
+			box-shadow: 0 0 0 0 color-mix(in oklab, var(--c-gold) 0%, transparent);
+		}
+		50% {
+			box-shadow: 0 0 22px 6px color-mix(in oklab, var(--c-gold) 45%, transparent);
+		}
+	}
+
+	.wax {
+		position: absolute;
+		display: grid;
+		place-items: center;
+		border-radius: 50%;
+		background: radial-gradient(circle at 42% 36%, #b8454e, #8f1f2c 38%, #6a0f1a 72%, #4f0a13);
+		box-shadow:
+			inset 0 2px 4px color-mix(in oklab, black 45%, transparent),
+			inset 0 -2px 3px color-mix(in oklab, #f0c9a0 25%, transparent);
+	}
+
+	.seal-wax {
+		inset: 21%;
+	}
+
+	/* The same disc on the flap, placed over the photo's own seal: 58% of the seal's 21.8% width. */
+	.flap-wax {
+		top: 56.33%;
+		left: 50.2%;
+		width: 12.64%;
+		aspect-ratio: 1;
+		translate: -50% -50%;
+	}
+
+	.monogram {
+		translate: 0 6%;
+		font-family: var(--font-script);
+		font-size: calc(var(--stage-w) * 0.1);
+		line-height: 1;
+		background: linear-gradient(160deg, #fbe7b0, var(--c-gold) 45%, #8a6424 80%);
+		background-clip: text;
+		color: transparent;
+		filter: drop-shadow(0 1px 0 color-mix(in oklab, black 55%, transparent));
+	}
+
+	.hint {
+		position: absolute;
+		bottom: max(8svh, calc(50svh - var(--stage-w) / 3 - 5rem));
+		left: 0;
+		right: 0;
+		z-index: 6;
+		color: color-mix(in oklab, var(--c-gold) 60%, var(--c-ivory));
+		text-align: center;
+		text-shadow: 0 1px 10px color-mix(in oklab, black 45%, transparent);
+		pointer-events: none;
+	}
+
+	/* Roses grow into two corners of the screen as the card comes out. */
+	.rose {
+		position: absolute;
+		z-index: 7;
+		width: min(46vw, 320px);
+		height: auto;
+		opacity: 0;
+		pointer-events: none;
+		filter: drop-shadow(0 8px 14px color-mix(in oklab, black 45%, transparent));
+	}
+
+	.rose-top {
+		top: -2%;
+		left: -4%;
+		transform-origin: 0 0;
+	}
+
+	.rose-bottom {
+		right: -4%;
+		bottom: -2%;
+		/* The cut-out blooms along its top and left edges; this corner needs it turned half a turn. */
+		rotate: 180deg;
 	}
 </style>

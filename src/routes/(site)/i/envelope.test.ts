@@ -24,6 +24,17 @@ describe('openingPlan', () => {
 		);
 	});
 
+	it('lets the flowers bloom while the card is still rising, before the envelope fades', () => {
+		fc.assert(
+			fc.property(slow, (s) => {
+				const { card, flowers, fade } = openingPlan(s);
+				expect(flowers.delay).toBeGreaterThan(card.delay);
+				expect(flowers.delay).toBeLessThan(end(card));
+				expect(end(flowers)).toBeLessThanOrEqual(fade.delay + fade.duration);
+			})
+		);
+	});
+
 	it('fades the envelope only after the card has risen', () => {
 		fc.assert(
 			fc.property(slow, (s) => {

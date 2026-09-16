@@ -18,6 +18,9 @@
 
 <svelte:head>
 	<title>{content.cover.title}, {content.event.title}</title>
+	<!-- The closed envelope is the first screen; its photo and seal come before everything else. -->
+	<link rel="preload" as="image" href="/images/envelope.webp" fetchpriority="high" />
+	<link rel="preload" as="image" href="/images/envelope-seal.webp" fetchpriority="high" />
 </svelte:head>
 
 <Envelope
