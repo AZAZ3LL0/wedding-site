@@ -3,7 +3,6 @@
 	import { onMount } from 'svelte';
 	import { motionTokens } from '$lib/actions/motion-tokens';
 	import type { ContentData } from '$lib/content/schema';
-	import { ScriptText } from '$lib/ui';
 	import { ENVELOPE_ART, ENVELOPE_OPENED, openingPlan, rememberOpened } from './envelope';
 
 	type Props = {
@@ -113,7 +112,7 @@
 
 	<div class="heading" bind:this={heading}>
 		<p class="eyebrow">{envelope.eyebrow}</p>
-		<p class="title" id="{id}-title"><ScriptText text={envelope.title} /></p>
+		<p class="title" id="{id}-title">{envelope.title}</p>
 	</div>
 
 	<div class="stage" bind:this={stage}>
@@ -206,10 +205,10 @@
 		text-shadow: 0 2px 14px color-mix(in oklab, black 45%, transparent);
 	}
 
-	/* «Алина Кыз Узату» runs 7.5 em wide: 11vw keeps it on one line with a margin on any phone. */
+	/* «Алина Кыз Узату» runs 9.6 em wide: 9.2vw keeps it on one line with a margin on any phone. */
 	.title {
 		font-family: var(--font-script);
-		font-size: clamp(2.2rem, 11vw, 5rem);
+		font-size: clamp(1.8rem, 9.2vw, 4rem);
 		line-height: 1.05;
 		white-space: nowrap;
 		color: color-mix(in oklab, var(--c-gold) 55%, var(--c-ivory));

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { ContentData } from '$lib/content/schema';
 	import { eventStart } from '$lib/content/event';
-	import { Countdown, Reveal, ScriptText, Section } from '$lib/ui';
+	import { Countdown, Reveal, Section } from '$lib/ui';
 	import Flourish from './Flourish.svelte';
 
 	type Props = {
@@ -21,7 +21,7 @@
 			<Flourish />
 			<p class="flex flex-col items-center gap-1" data-welcome>
 				<span class="text-xl">{welcome.greeting}</span>
-				<span class="font-script text-5xl text-accent"><ScriptText text={welcome.name} /></span>
+				<span class="font-script text-5xl text-accent">{welcome.name}</span>
 			</p>
 			<p class="flex flex-col gap-1 text-sm font-medium tracking-[0.18em] text-accent uppercase">
 				<span>{invitation.dateLine}</span>

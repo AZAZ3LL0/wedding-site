@@ -9,7 +9,6 @@ export { default as Heading } from './Heading.svelte';
 export { default as MapCard } from './MapCard.svelte';
 export { default as RadioGroup } from './RadioGroup.svelte';
 export { default as Reveal } from './Reveal.svelte';
-export { default as ScriptText } from './ScriptText.svelte';
 export { default as Section } from './Section.svelte';
 export { default as TextArea } from './TextArea.svelte';
 export { default as TextInput } from './TextInput.svelte';

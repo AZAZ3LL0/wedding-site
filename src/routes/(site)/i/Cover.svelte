@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { ContentData } from '$lib/content/schema';
 	import { dateParts } from '$lib/content/event';
-	import { ScriptText } from '$lib/ui';
 
 	type Props = {
 		cover: ContentData['cover'];
@@ -19,8 +18,8 @@
 	<article class="card" data-card>
 		<div class="panel">
 			<h1 class="title">
-				<ScriptText text={cover.title} />
-				<span class="title-line"><ScriptText text={cover.eyebrow} /></span>
+				{cover.title}
+				<span class="title-line">{cover.eyebrow}</span>
 			</h1>
 
 			<p class="text">{cover.text}</p>
@@ -35,7 +34,7 @@
 				<span class="venue">{venue.title}</span>
 			</p>
 
-			<p class="hosts"><ScriptText text={hosts} /></p>
+			<p class="hosts">{hosts}</p>
 		</div>
 
 		<!-- The printed card's own flowers, cut out of it so they can grow in when the envelope opens.
@@ -84,12 +83,12 @@
 		background: radial-gradient(ellipse 90% 60% at 50% 25%, #f6f1ec, #efe6de);
 	}
 
-	/* «Кыз Узату!» runs about 5 em wide, so the size tracks the panel and each line stays whole. */
+	/* «Кыз Узату!» runs 6.3 em wide, so the size tracks the panel and each line stays whole. */
 	.title {
 		display: flex;
 		flex-direction: column;
 		font-family: var(--font-script);
-		font-size: calc(var(--w) * 0.132);
+		font-size: calc(var(--w) * 0.106);
 		font-weight: 400;
 		line-height: 1.05;
 		white-space: nowrap;
@@ -127,7 +126,7 @@
 	/* Sized to the panel like the title, so the signature stays clear of the bottom flowers. */
 	.hosts {
 		font-family: var(--font-script);
-		font-size: calc(var(--w) * 0.076);
+		font-size: calc(var(--w) * 0.072);
 		line-height: 1.1;
 		white-space: nowrap;
 	}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Reveal, ScriptText, Section } from '$lib/ui';
+	import { Reveal, Section } from '$lib/ui';
 
 	type Props = { eyebrow: string; monogram: string; hosts: string };
 
@@ -26,7 +26,7 @@
 					<!-- The same thin roman capital as the envelope seal. -->
 					<span class="font-display text-7xl leading-none font-light">{monogram}</span>
 				</div>
-				<p class="font-script text-5xl leading-tight"><ScriptText text={hosts} /></p>
+				<p class="font-script text-4xl leading-tight sm:text-5xl">{hosts}</p>
 			</div>
 		</Reveal>
 	</Section>
