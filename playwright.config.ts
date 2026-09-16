@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { defineConfig, devices } from '@playwright/test';
+import { ADMIN_PASSWORD } from './tests/e2e/admin';
 
 export default defineConfig({
 	testDir: 'tests/e2e',
@@ -8,7 +9,11 @@ export default defineConfig({
 	retries: process.env.CI ? 1 : 0,
 	reporter: process.env.CI ? [['github'], ['list']] : 'list',
 	use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },
-	projects: [{ name: 'mobile', use: { ...devices['Pixel 7'] } }],
+	projects: [
+		{ name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: '**/admin.e2e.ts' },
+		// The panel is a wide table the organizer opens on a laptop, so its suite runs on a desktop.
+		{ name: 'desktop', use: { ...devices['Desktop Chrome'] }, testMatch: '**/admin.e2e.ts' }
+	],
 	webServer: {
 		// CI builds in an earlier step, so only local runs pay for a rebuild.
 		command: `${process.env.CI ? '' : 'pnpm build && '}pnpm preview --port 4173 --strictPort`,
@@ -17,7 +22,7 @@ export default defineConfig({
 		// Preview runs with NODE_ENV=production, which requires these. Throwaway values per run.
 		env: {
 			SESSION_SECRET: randomBytes(32).toString('hex'),
-			ADMIN_PASSWORD: randomBytes(18).toString('base64url')
+			ADMIN_PASSWORD
 		}
 	}
 });

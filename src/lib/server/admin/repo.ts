@@ -10,6 +10,7 @@ export type AdminGuestRow = {
 	id: string;
 	firstName: string;
 	lastName: string;
+	name: string; // full name, so components never assemble one themselves
 	isPlusOne: boolean;
 	invitedByName: string | null; // who brings this guest, set for a companion
 	companionName: string | null; // whom this guest brings
@@ -80,6 +81,7 @@ export async function listGuestRows(db: Db): Promise<AdminGuestRow[]> {
 		id: row.id,
 		firstName: row.firstName,
 		lastName: row.lastName,
+		name: fullName(row.firstName, row.lastName)!,
 		isPlusOne: row.isPlusOne,
 		invitedByName: fullName(row.inviterFirstName, row.inviterLastName),
 		companionName: fullName(row.companionFirstName, row.companionLastName),

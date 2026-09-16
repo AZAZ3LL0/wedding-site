@@ -42,6 +42,21 @@ export function filterRows(rows: AdminGuestRow[], filters: Filters): AdminGuestR
 	return rows.filter((row) => {
 		if (filters.status !== 'all' && statusOf(row) !== filters.status) return false;
 		if (filters.audience !== 'all' && row.audience !== (filters.audience as Audience)) return false;
-		return search === '' || normalize(`${row.firstName} ${row.lastName}`).includes(search);
+		return search === '' || normalize(row.name).includes(search);
 	});
+}
+
+export function filterQuery(filters: Filters): string {
+	const params = new URLSearchParams();
+	if (filters.status !== 'all') params.set('status', filters.status);
+	if (filters.audience !== 'all') params.set('audience', filters.audience);
+	if (filters.search !== '') params.set('search', filters.search);
+	return params.toString();
+}
+
+// A form action rewrites the whole query string, so the current filters ride along with it and
+// the table the organizer was looking at survives the post.
+export function actionUrl(name: string, filters: Filters): string {
+	const query = filterQuery(filters);
+	return query ? `?/${name}&${query}` : `?/${name}`;
 }

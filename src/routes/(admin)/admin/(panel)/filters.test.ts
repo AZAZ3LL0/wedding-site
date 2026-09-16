@@ -2,13 +2,14 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { AdminGuestRow } from '$lib/server/admin/repo';
 import type { Audience } from '$lib/types';
-import { EMPTY_FILTERS, filterRows, readFilters, type Filters } from './filters';
+import { EMPTY_FILTERS, actionUrl, filterRows, readFilters, type Filters } from './filters';
 
 function row(over: Partial<AdminGuestRow>): AdminGuestRow {
 	return {
 		id: 'guest',
 		firstName: 'Иван',
 		lastName: 'Иванов',
+		name: 'Иван Иванов',
 		isPlusOne: false,
 		invitedByName: null,
 		companionName: null,
@@ -36,15 +37,22 @@ const answered = (attending: 'yes' | 'no'): AdminGuestRow['rsvp'] => ({
 });
 
 const rows: AdminGuestRow[] = [
-	row({ id: 'a', firstName: 'Иван', lastName: 'Иванов', rsvp: answered('yes') }),
+	row({ id: 'a', rsvp: answered('yes') }),
 	row({
 		id: 'b',
 		firstName: 'Алёна',
 		lastName: 'Петрова',
+		name: 'Алёна Петрова',
 		audience: 'family',
 		rsvp: answered('no')
 	}),
-	row({ id: 'c', firstName: 'Пётр', lastName: 'Козлов', audience: 'colleagues' })
+	row({
+		id: 'c',
+		firstName: 'Пётр',
+		lastName: 'Козлов',
+		name: 'Пётр Козлов',
+		audience: 'colleagues'
+	})
 ];
 
 describe('readFilters', () => {
@@ -104,6 +112,34 @@ describe('filterRows', () => {
 				(status, audience, search) => {
 					const result = filterRows(rows, { status, audience, search });
 					expect(rows.filter((r) => result.includes(r))).toEqual(result);
+				}
+			)
+		);
+	});
+});
+
+describe('actionUrl', () => {
+	it('posts to the bare action when nothing is filtered', () => {
+		expect(actionUrl('deleteGuest', EMPTY_FILTERS)).toBe('?/deleteGuest');
+	});
+
+	it('carries the current filters so the post lands back on the same view', () => {
+		expect(actionUrl('updateParty', { status: 'yes', audience: 'family', search: 'Иван' })).toBe(
+			'?/updateParty&status=yes&audience=family&search=%D0%98%D0%B2%D0%B0%D0%BD'
+		);
+	});
+
+	it('round-trips through readFilters', () => {
+		fc.assert(
+			fc.property(
+				fc.constantFrom<Filters['status']>('all', 'yes', 'no', 'none'),
+				fc.constantFrom<Filters['audience']>('all', 'family', 'friends', 'colleagues'),
+				fc.string({ maxLength: 20 }).map((s) => s.trim()),
+				(status, audience, search) => {
+					const url = new URL(
+						`http://localhost/admin${actionUrl('x', { status, audience, search })}`
+					);
+					expect(readFilters(url.searchParams)).toEqual({ status, audience, search });
 				}
 			)
 		);

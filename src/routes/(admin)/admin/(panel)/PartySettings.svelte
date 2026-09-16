@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { admin } from '$lib/content/admin';
 	import type { AdminGuestRow } from '$lib/server/admin/repo';
-	import { AUDIENCE_OPTIONS } from './filters';
+	import { AUDIENCE_OPTIONS, actionUrl, type Filters } from './filters';
 
-	let { row }: { row: AdminGuestRow } = $props();
+	let { row, filters }: { row: AdminGuestRow; filters: Filters } = $props();
 
 	const copy = admin.party;
 	const audiences = AUDIENCE_OPTIONS.filter((value) => value !== 'all');
@@ -11,7 +11,7 @@
 </script>
 
 <!-- Changes the party, not the guest: every member of the party moves together. -->
-<form method="post" action="?/updateParty" class="flex flex-col gap-1 text-xs">
+<form method="post" action={actionUrl('updateParty', filters)} class="flex flex-col gap-1 text-xs">
 	<input type="hidden" name="partyId" value={row.partyId} />
 
 	<label class="sr-only" for="audience-{row.partyId}">{admin.table.audience}</label>

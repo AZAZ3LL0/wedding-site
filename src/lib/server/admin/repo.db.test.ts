@@ -79,6 +79,7 @@ describe('listGuestRows', () => {
 				'id',
 				'firstName',
 				'lastName',
+				'name',
 				'isPlusOne',
 				'invitedByName',
 				'companionName',

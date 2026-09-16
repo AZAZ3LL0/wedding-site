@@ -43,6 +43,7 @@ const row = fc
 		id: `guest-${nextId++}`,
 		firstName: 'Гость',
 		lastName: String(nextId),
+		name: `Гость ${nextId}`,
 		isPlusOne,
 		invitedByName: isPlusOne ? 'Кто-то' : null,
 		companionName: null,
@@ -137,6 +138,7 @@ describe('aggregate', () => {
 					...sample(),
 					firstName: 'Анна',
 					lastName: 'Сидорова',
+					name: 'Анна Сидорова',
 					rsvp: { ...declined(), attending: 'yes', allergies: 'без орехов' }
 				},
 				{ ...sample(), rsvp: { ...declined(), allergies: 'не считается' } },
