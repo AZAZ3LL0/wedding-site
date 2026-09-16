@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { defineConfig, devices } from '@playwright/test';
 import { ADMIN_PASSWORD } from './tests/e2e/admin';
+import { WEBHOOK_SECRET } from './tests/e2e/telegram';
 
 export default defineConfig({
 	testDir: 'tests/e2e',
@@ -22,7 +23,8 @@ export default defineConfig({
 		// Preview runs with NODE_ENV=production, which requires these. Throwaway values per run.
 		env: {
 			SESSION_SECRET: randomBytes(32).toString('hex'),
-			ADMIN_PASSWORD
+			ADMIN_PASSWORD,
+			TELEGRAM_WEBHOOK_SECRET: WEBHOOK_SECRET
 		}
 	}
 });
