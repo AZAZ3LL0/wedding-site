@@ -21,15 +21,3 @@ export function scallopedEllipse(
 	];
 	return `M${x0} ${y0}${rest.map(([x, y]) => ` A${bump} ${bump} 0 0 1 ${x} ${y}`).join('')}Z`;
 }
-
-// One cosmos petal pointing up from the flower centre, with the notched tip of the printed card.
-export function petal(radius: number): string {
-	const r = radius;
-	return [
-		`M0 0`,
-		`C${fixed(r * 0.34)} ${fixed(-r * 0.2)} ${fixed(r * 0.42)} ${fixed(-r * 0.82)} ${fixed(r * 0.16)} ${fixed(-r)}`,
-		`L0 ${fixed(-r * 0.9)}`,
-		`L${fixed(-r * 0.16)} ${fixed(-r)}`,
-		`C${fixed(-r * 0.42)} ${fixed(-r * 0.82)} ${fixed(-r * 0.34)} ${fixed(-r * 0.2)} 0 0Z`
-	].join(' ');
-}

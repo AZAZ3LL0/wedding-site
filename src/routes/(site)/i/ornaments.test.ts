@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { petal, scallopedEllipse } from './ornaments';
+import { scallopedEllipse } from './ornaments';
 
 const numbers = (path: string) => (path.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
 
@@ -30,21 +30,6 @@ describe('scallopedEllipse', () => {
 				for (const [, x, y] of path.matchAll(/(?:M|0 0 1 )(-?[\d.]+) (-?[\d.]+)/g)) {
 					const d = ((Number(x) - 100) / rx) ** 2 + ((Number(y) - 50) / ry) ** 2;
 					expect(d).toBeCloseTo(1, 1);
-				}
-			})
-		);
-	});
-});
-
-describe('petal', () => {
-	it('stays inside its radius above the centre', () => {
-		fc.assert(
-			fc.property(fc.integer({ min: 1, max: 200 }), (r) => {
-				const values = numbers(petal(r));
-				const ys = values.filter((_, i) => i % 2 === 1);
-				for (const y of ys) {
-					expect(y).toBeLessThanOrEqual(0);
-					expect(y).toBeGreaterThanOrEqual(-r);
 				}
 			})
 		);

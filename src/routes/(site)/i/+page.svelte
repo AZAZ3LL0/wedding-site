@@ -17,8 +17,7 @@
 </script>
 
 <svelte:head>
-	<title>{content.cover.title}, {content.cover.eyebrow}</title>
-	<link rel="preload" as="image" href={content.cover.photo.src} fetchpriority="high" />
+	<title>{content.cover.title}, {content.event.title}</title>
 </svelte:head>
 
 <Envelope
@@ -33,7 +32,12 @@
 
 <div inert={covering}>
 	<main tabindex="-1" bind:this={main} class="outline-none">
-		<Cover cover={content.cover} date={content.event.date} />
+		<Cover
+			cover={content.cover}
+			event={content.event}
+			venue={content.venue}
+			hosts={content.hosts}
+		/>
 		<Invitation
 			invitation={content.invitation}
 			event={content.event}

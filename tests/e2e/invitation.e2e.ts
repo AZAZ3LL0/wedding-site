@@ -11,14 +11,17 @@ test.beforeEach(async ({ page, context, baseURL }) => {
 test('invitation card shows the event from the content config', async ({ page }) => {
 	await page.goto('/i');
 
-	const card = page.locator('header');
-	await expect(card.getByRole('heading', { level: 1 })).toHaveText(content.cover.title);
-	await expect(card.getByText(content.cover.eyebrow)).toBeVisible();
+	const card = page.locator('[data-card]');
+	// Script headings paint a real capital A, so the heading is checked by what it reads as.
+	await expect(card.getByRole('heading', { level: 1 })).toHaveAccessibleName(
+		`${content.cover.title} ${content.cover.eyebrow}`
+	);
 	await expect(card.getByText(content.cover.text)).toBeVisible();
-	await expect(card.getByRole('img', { name: content.cover.photo.alt })).toBeVisible();
 	await expect(card.locator(`time[datetime="${content.event.date}"]`)).toHaveText('28 | 11 | 2026');
+	await expect(card.getByText(content.event.time)).toBeVisible();
+	await expect(card.getByText(content.venue.address)).toBeVisible();
+	await expect(card.getByText(content.venue.title)).toBeVisible();
 
-	await expect(page.getByText(content.invitation.text)).toBeVisible();
 	await expect(page.getByText(content.invitation.dateLine)).toBeVisible();
 	// The countdown aims at the local start in Astrakhan, not at the guest's time zone.
 	await expect(page.locator('time[datetime="2026-11-28T17:00:00+04:00"]')).toBeVisible();

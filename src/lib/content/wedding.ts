@@ -15,13 +15,14 @@ export const content = {
 	envelope: {
 		eyebrow: 'Приглашение на Кыз Узату',
 		title: 'Алина',
-		monogram: 'А',
-		open: 'Открыть приглашение'
+		monogram: 'Т',
+		open: 'Нажмите на печать'
 	},
+	// The card inside the envelope, after the printed invitation: title, text, date, place, hosts.
 	cover: {
-		eyebrow: 'Кыз Узату',
+		eyebrow: 'Кыз Узату!',
 		title: 'Алина',
-		text: 'С огромной радостью приглашаем вас на наш особенный день',
+		text: 'С огромной радостью приглашаем вас на наш особенный день и разделить с нами эту трогательную и важную дату.',
 		photo: { src: '/images/cover.svg', alt: 'TODO' }
 	},
 	invitation: {
@@ -43,7 +44,7 @@ export const content = {
 	},
 	timeline: [],
 	dressCode: {
-		text: 'TODO',
+		text: 'Следовать дресс-коду не обязательно: мы в любом случае будем рады вас видеть',
 		// TODO: replace the sample palette with the real one
 		palette: [
 			{ hex: '#6e6b3c', name: 'олива' },
@@ -87,7 +88,7 @@ export const content = {
 		failed: 'Не получилось открыть приглашение. Попробуйте ещё раз'
 	},
 	rsvp: {
-		cta: 'Ответить на приглашение',
+		cta: 'Заполнить анкету гостя',
 		ctaAnswered: 'Посмотреть ответ',
 		eyebrow: 'Ответ на приглашение',
 		title: 'Будете с нами?',
