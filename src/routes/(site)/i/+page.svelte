@@ -3,7 +3,7 @@
 	import Answer from './Answer.svelte';
 	import Cover from './Cover.svelte';
 	import DressCode from './DressCode.svelte';
-	import Envelope from './Envelope.svelte';
+	import Envelope from '../Envelope.svelte';
 	import Farewell from './Farewell.svelte';
 	import Invitation from './Invitation.svelte';
 	import Location from './Location.svelte';

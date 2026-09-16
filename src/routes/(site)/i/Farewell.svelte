@@ -23,9 +23,8 @@
 							stroke-dasharray="1.5 4"
 						/>
 					</svg>
-					<span class="translate-y-[4%] font-script text-7xl leading-none">
-						<ScriptText text={monogram} />
-					</span>
+					<!-- The same thin roman capital as the envelope seal. -->
+					<span class="font-display text-7xl leading-none font-light">{monogram}</span>
 				</div>
 				<p class="font-script text-5xl leading-tight"><ScriptText text={hosts} /></p>
 			</div>

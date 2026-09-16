@@ -15,31 +15,21 @@ describe('openingPlan', () => {
 		);
 	});
 
-	it('starts the card only after the flap has passed upright', () => {
+	it('lets the flowers bloom only once the flap has passed upright', () => {
 		fc.assert(
 			fc.property(slow, (s) => {
-				const { flap, card } = openingPlan(s);
-				expect(card.delay).toBeGreaterThanOrEqual(flap.delay + flap.duration / 2);
+				const { flap, flowers } = openingPlan(s);
+				expect(flowers.delay).toBeGreaterThanOrEqual(flap.delay + flap.duration / 2);
 			})
 		);
 	});
 
-	it('lets the flowers bloom while the card is still rising, before the envelope fades', () => {
+	it('fades the envelope once the flowers are half open, and not before they finish', () => {
 		fc.assert(
 			fc.property(slow, (s) => {
-				const { card, flowers, fade } = openingPlan(s);
-				expect(flowers.delay).toBeGreaterThan(card.delay);
-				expect(flowers.delay).toBeLessThan(end(card));
-				expect(end(flowers)).toBeLessThanOrEqual(fade.delay + fade.duration);
-			})
-		);
-	});
-
-	it('fades the envelope only after the card has risen', () => {
-		fc.assert(
-			fc.property(slow, (s) => {
-				const { card, fade } = openingPlan(s);
-				expect(fade.delay).toBeGreaterThanOrEqual(end(card));
+				const { flowers, fade } = openingPlan(s);
+				expect(fade.delay).toBeGreaterThanOrEqual(flowers.delay + flowers.duration / 2);
+				expect(end(flowers)).toBeLessThanOrEqual(end(fade));
 			})
 		);
 	});
