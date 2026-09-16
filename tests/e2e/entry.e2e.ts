@@ -65,6 +65,8 @@ test('a returning guest on another device picks their own card instead of a dupl
 	const use = test.info().project.use;
 
 	const first = await (await browser.newContext(use)).newPage();
+	// The envelope now covers the entry page too; this test is about the form behind it.
+	await first.addInitScript(() => sessionStorage.setItem('envelope-opened', '1'));
 	await enterName(first, name.firstName, name.lastName);
 	await expect(first).toHaveURL('/i');
 	await first.goto('/rsvp');

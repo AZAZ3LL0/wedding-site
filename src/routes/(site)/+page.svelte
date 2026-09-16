@@ -1,7 +1,9 @@
 <script lang="ts">
 	import type { SubmitFunction } from '@sveltejs/kit';
+	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { Button, Field, Heading, RadioGroup, Section, TextInput, Toast } from '$lib/ui';
+	import Envelope from './Envelope.svelte';
 
 	let { data, form } = $props();
 
@@ -12,6 +14,10 @@
 
 	type Action = 'register' | 'choose' | 'new';
 	let pending = $state<Action | null>(null);
+
+	// The envelope opens the site wherever a guest lands first: here before the name, or on /i.
+	let covering = $state(false);
+	let main: HTMLElement;
 
 	const track =
 		(action: Action): SubmitFunction =>
@@ -27,9 +33,26 @@
 
 <svelte:head>
 	<title>{entry.title}</title>
+	<link rel="preload" as="image" href="/images/envelope.webp" fetchpriority="high" />
+	<link rel="preload" as="image" href="/images/envelope-seal.webp" fetchpriority="high" />
 </svelte:head>
 
-<main class="grid min-h-dvh place-items-center">
+<Envelope
+	envelope={data.content.envelope}
+	oncover={(value) => (covering = value)}
+	onopen={async () => {
+		// Wait for `inert` to leave the DOM, otherwise the browser refuses the focus.
+		await tick();
+		main.focus({ preventScroll: true });
+	}}
+/>
+
+<main
+	class="grid min-h-dvh place-items-center outline-none"
+	tabindex="-1"
+	inert={covering}
+	bind:this={main}
+>
 	<Section variant="light" class="w-full">
 		<div class="mx-auto flex max-w-sm flex-col gap-10">
 			<div class="flex flex-col items-center gap-4 text-center">
