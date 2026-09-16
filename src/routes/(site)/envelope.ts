@@ -3,20 +3,22 @@
 export const ENVELOPE_OPENED = 'envelope-opened';
 
 // <html> class set once the closed envelope is on screen. Art that only shows later (the card's lace
-// and flowers, the roses) waits for it, so the first screen downloads alone on a slow phone instead
-// of sharing the connection with everything below it.
+// and roses) waits for it, so the first screen downloads alone on a slow phone instead of sharing
+// the connection with everything below it.
 export const ENVELOPE_ART = 'envelope-art';
 
+// <html> class set as the envelope starts to fade: the card rises into place and its roses bloom.
+export const ENVELOPE_LEAVING = 'envelope-leaving';
+
 export type Phase = { delay: number; duration: number };
-export type OpeningPlan = { seal: Phase; flap: Phase; flowers: Phase; fade: Phase };
+export type OpeningPlan = { seal: Phase; flap: Phase; fade: Phase };
 
 // Timings scale with --dur-slow so the envelope keeps pace with the rest of the site's motion.
 export function openingPlan(slow: number): OpeningPlan {
 	return {
 		seal: { delay: 0, duration: slow * 0.6 },
 		flap: { delay: slow * 0.45, duration: slow * 1.6 },
-		flowers: { delay: slow * 1.3, duration: slow * 1.4 },
-		fade: { delay: slow * 2.2, duration: slow * 0.9 }
+		fade: { delay: slow * 1.6, duration: slow * 1.1 }
 	};
 }
 
