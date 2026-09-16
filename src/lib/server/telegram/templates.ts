@@ -2,19 +2,8 @@ import type { ContentData } from '$lib/content/schema';
 import type { RsvpNotice } from '$lib/server/rsvp/repo';
 import type { AttendStatus, ReminderStage, RsvpPublic } from '$lib/types';
 
-type Menu = Pick<ContentData['menu'], 'courses' | 'drinks'>;
-
-// The organizer sees an id the menu no longer has, so a stale choice is noticed and fixed.
-function choices(ids: string[], options: { id: string; label: string }[]): string {
-	if (ids.length === 0) return 'не выбрано';
-	return ids.map((id) => options.find((option) => option.id === id)?.label ?? id).join(', ');
-}
-
-function rsvpNotice(
-	kind: 'created' | 'updated',
-	{ guest, answer, companion }: RsvpNotice,
-	menu: Menu
-) {
+// The site no longer asks about dishes and drinks, so the organizer's notice leaves them out too.
+function rsvpNotice(kind: 'created' | 'updated', { guest, answer, companion }: RsvpNotice) {
 	const name = [guest.firstName, guest.lastName].filter(Boolean).join(' ');
 	const lines = [
 		kind === 'created' ? 'Новый ответ на приглашение' : 'Гость изменил ответ',
@@ -23,8 +12,6 @@ function rsvpNotice(
 	];
 	if (answer.attending === 'yes') {
 		if (answer.attendingRegistry) lines.push('ЗАГС: да');
-		lines.push(`Горячее: ${choices(answer.mainCourses ?? [], menu.courses)}`);
-		lines.push(`Напитки: ${choices(answer.drinks ?? [], menu.drinks)}`);
 		if (answer.allergies) lines.push(`Аллергии: ${answer.allergies}`);
 		if (answer.needsTransfer) lines.push('Трансфер: нужен');
 	}
@@ -32,11 +19,7 @@ function rsvpNotice(
 	if (guest.telegramUsername) lines.push(`Telegram: @${guest.telegramUsername}`);
 	if (companion) {
 		const companionName = [companion.firstName, companion.lastName].filter(Boolean).join(' ');
-		lines.push(
-			`Спутник: ${companionName}`,
-			`Горячее спутника: ${choices(companion.mainCourses, menu.courses)}`,
-			`Напитки спутника: ${choices(companion.drinks, menu.drinks)}`
-		);
+		lines.push(`Спутник: ${companionName}`);
 	}
 	return lines.join('\n');
 }
@@ -56,12 +39,6 @@ export const commands = {
 	yes: 'yes',
 	no: 'no'
 } as const;
-
-export const COURSE_PREFIX = 'course_';
-export const DRINK_PREFIX = 'drink_';
-
-// One-based, so the guest reads the first dish next to /course_1.
-export const menuCommand = (prefix: string, index: number) => `/${prefix}${index + 1}`;
 
 export type BotContent = Pick<
 	ContentData,
@@ -144,17 +121,6 @@ function contacts({ contacts: list }: BotContent): string {
 	);
 }
 
-function menuList(
-	options: { id: string; label: string }[],
-	chosen: string[],
-	prefix: string
-): string[] {
-	return options.map(
-		(option, index) =>
-			`${chosen.includes(option.id) ? '✓ ' : ''}${option.label} ${menuCommand(prefix, index)}`
-	);
-}
-
 // What the guest sees on /rsvp and after every change (tech.md §13, 5.4).
 function rsvpState({ rsvp }: BotAnswer, content: BotContent): string {
 	const copy = content.rsvp;
@@ -171,17 +137,7 @@ function rsvpState({ rsvp }: BotAnswer, content: BotContent): string {
 			`Если планы изменились — /${commands.yes}`
 		);
 	}
-	return lines(
-		`${copy.attendingLabel}: ${copy.attendingYes}`,
-		'',
-		`${copy.coursesLabel}:`,
-		...menuList(content.menu.courses, rsvp.mainCourses, COURSE_PREFIX),
-		'',
-		`${copy.drinksLabel}:`,
-		...menuList(content.menu.drinks, rsvp.drinks, DRINK_PREFIX),
-		'',
-		`Передумали — /${commands.no}`
-	);
+	return lines(`${copy.attendingLabel}: ${copy.attendingYes}`, `Передумали — /${commands.no}`);
 }
 
 // One of three texts per stage, picked from the answer on file at send time (tech.md §5).
@@ -219,13 +175,6 @@ export const templates = {
 		dressCode,
 		contacts,
 		rsvpState,
-		answerFirst: (content: BotContent) =>
-			lines(
-				'Сначала ответьте, придёте ли вы.',
-				`${content.rsvp.attendingYes} — /${commands.yes}`,
-				`${content.rsvp.attendingNo} — /${commands.no}`
-			),
-		unknownChoice: (content: BotContent) => content.rsvp.unknownOption,
 		saved: (state: string) => lines('Ответ сохранён.', '', state),
 		rejectedAnswer: (content: BotContent) => content.rsvp.invalid,
 		closed: (content: BotContent) => content.rsvp.closed

@@ -1,4 +1,3 @@
-import type { ContentData } from '$lib/content/schema';
 import type { Db } from '$lib/server/db';
 import { findRsvpNotice } from '$lib/server/rsvp/repo';
 import type { TelegramClient } from '$lib/server/telegram/client';
@@ -13,7 +12,6 @@ export type RsvpNotifyAdminDeps = {
 	db: Db;
 	telegram: TelegramClient;
 	adminChatId: number;
-	menu: ContentData['menu'];
 };
 
 // One key per saved state of the answer, so each change reaches the organizer exactly once.
@@ -42,7 +40,7 @@ export async function handleRsvpNotifyAdmin(
 	const outcome = await withReceipt(deps.db, key, async () => {
 		await deps.telegram.sendMessage({
 			chatId: deps.adminChatId,
-			text: templates.rsvpNotice(job.kind, notice, deps.menu)
+			text: templates.rsvpNotice(job.kind, notice)
 		});
 	});
 	return outcome === 'done' ? 'sent' : 'duplicate';

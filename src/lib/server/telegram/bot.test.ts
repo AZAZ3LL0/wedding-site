@@ -1,39 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { rsvpPayloadSchema, type GuestPublic, type RsvpPublic } from '$lib/types';
-import { applyDelta, menuChoice, type BotRsvpState, type RsvpDelta } from './bot';
-
-const courses = [{ id: 'plov' }, { id: 'fish' }, { id: 'beef' }];
-
-describe('menuChoice', () => {
-	it.each([
-		['course_1', 'plov'],
-		['course_3', 'beef']
-	])('reads %s as the matching dish', (command, id) => {
-		expect(menuChoice(command, 'course_', courses)).toBe(id);
-	});
-
-	it.each(['course_0', 'course_4', 'course_', 'course_x', 'course_1.5', 'course_-1'])(
-		'has no dish for %s',
-		(command) => {
-			expect(menuChoice(command, 'course_', courses)).toBeNull();
-		}
-	);
-
-	it('has nothing to say about another prefix', () => {
-		expect(menuChoice('drink_1', 'course_', courses)).toBeNull();
-	});
-
-	it('maps every in-range command back to its own option, and nothing else', () => {
-		fc.assert(
-			fc.property(fc.integer({ min: 1, max: courses.length }), (position) => {
-				expect(menuChoice(`course_${position}`, 'course_', courses)).toBe(
-					courses[position - 1]!.id
-				);
-			})
-		);
-	});
-});
+import { applyDelta, type BotRsvpState, type RsvpDelta } from './bot';
 
 const rsvp = (over: Partial<RsvpPublic> = {}): RsvpPublic => ({
 	attending: 'yes',
@@ -69,48 +37,18 @@ const state = (answer: RsvpPublic | null, over: Partial<BotRsvpState> = {}): Bot
 
 describe('applyDelta', () => {
 	it('answers yes for a guest who has not answered yet', () => {
-		const payload = applyDelta(state(null), { kind: 'attending', value: 'yes' }, false);
+		const payload = applyDelta(state(null), { kind: 'attending', value: 'yes' });
 
 		expect(payload.attending).toBe('yes');
-		expect(payload.mainCourses).toEqual([]);
 	});
 
-	it('replaces the dish when the menu allows only one', () => {
-		const current = state(rsvp({ mainCourses: ['plov'] }));
-
-		expect(applyDelta(current, { kind: 'course', id: 'fish' }, false).mainCourses).toEqual([
-			'fish'
-		]);
-	});
-
-	it('adds and removes a dish when the menu allows several', () => {
-		const current = state(rsvp({ mainCourses: ['plov'] }));
-
-		expect(applyDelta(current, { kind: 'course', id: 'fish' }, true).mainCourses).toEqual([
-			'plov',
-			'fish'
-		]);
-		expect(applyDelta(current, { kind: 'course', id: 'plov' }, true).mainCourses).toEqual([]);
-	});
-
-	it('toggles a drink', () => {
-		const current = state(rsvp({ drinks: ['tea'] }));
-
-		expect(applyDelta(current, { kind: 'drink', id: 'juice' }, false).drinks).toEqual([
-			'tea',
-			'juice'
-		]);
-		expect(applyDelta(current, { kind: 'drink', id: 'tea' }, false).drinks).toEqual([]);
-	});
-
-	it('carries the companion and the free text through an unrelated change', () => {
+	it('carries the companion and the free text through a change of answer', () => {
 		const current = state(rsvp({ allergies: 'орехи', comment: 'приедем к шести' }), {
-			companion: { firstName: 'Анна', lastName: 'Гостева', mainCourses: ['plov'], drinks: ['tea'] }
+			companion: { firstName: 'Анна', lastName: 'Гостева', mainCourses: [], drinks: [] }
 		});
 
-		const payload = applyDelta(current, { kind: 'drink', id: 'juice' }, false);
-
-		expect(payload).toMatchObject({
+		expect(applyDelta(current, { kind: 'attending', value: 'no' })).toMatchObject({
+			attending: 'no',
 			allergies: 'орехи',
 			comment: 'приедем к шести',
 			telegramUsername: 'petr_g',
@@ -118,20 +56,13 @@ describe('applyDelta', () => {
 		});
 	});
 
-	const deltaArb: fc.Arbitrary<RsvpDelta> = fc.oneof(
-		fc.constantFrom<RsvpDelta>(
-			{ kind: 'attending', value: 'yes' },
-			{ kind: 'attending', value: 'no' }
-		),
-		fc
-			.record({ kind: fc.constantFrom('course' as const, 'drink' as const), id: fc.string() })
-			.map((d) => d as RsvpDelta)
+	const deltaArb = fc.constantFrom<RsvpDelta>(
+		{ kind: 'attending', value: 'yes' },
+		{ kind: 'attending', value: 'no' }
 	);
 
 	const stateArb: fc.Arbitrary<BotRsvpState> = fc
 		.record({
-			mainCourses: fc.uniqueArray(fc.string({ minLength: 1 }), { maxLength: 3 }),
-			drinks: fc.uniqueArray(fc.string({ minLength: 1 }), { maxLength: 3 }),
 			allergies: fc.option(fc.string({ maxLength: 300 }), { nil: null }),
 			comment: fc.option(fc.string({ maxLength: 1000 }), { nil: null }),
 			songRequest: fc.option(fc.string({ maxLength: 200 }), { nil: null }),
@@ -146,20 +77,18 @@ describe('applyDelta', () => {
 
 	it('always produces a payload the shared rsvp schema accepts', () => {
 		fc.assert(
-			fc.property(stateArb, deltaArb, fc.boolean(), (current, delta, multiSelect) => {
-				expect(rsvpPayloadSchema.safeParse(applyDelta(current, delta, multiSelect)).success).toBe(
-					true
-				);
+			fc.property(stateArb, deltaArb, (current, delta) => {
+				expect(rsvpPayloadSchema.safeParse(applyDelta(current, delta)).success).toBe(true);
 			})
 		);
 	});
 
-	it('changes only what the tap is about, never the free text or the username', () => {
+	it('changes only the answer, never the free text or the username', () => {
 		fc.assert(
-			fc.property(stateArb, deltaArb, fc.boolean(), (current, delta, multiSelect) => {
-				const payload = applyDelta(current, delta, multiSelect);
+			fc.property(stateArb, deltaArb, (current, delta) => {
 				const answer = current.guest.rsvp!;
-				expect(payload).toMatchObject({
+				expect(applyDelta(current, delta)).toMatchObject({
+					attending: delta.value,
 					allergies: answer.allergies,
 					comment: answer.comment,
 					songRequest: answer.songRequest,
@@ -167,22 +96,6 @@ describe('applyDelta', () => {
 					attendingRegistry: answer.attendingRegistry,
 					telegramUsername: current.telegramUsername
 				});
-			})
-		);
-	});
-
-	it('toggling one drink twice puts the answer back where it started', () => {
-		fc.assert(
-			fc.property(stateArb, fc.string({ minLength: 1 }), (current, id) => {
-				const once = applyDelta(current, { kind: 'drink', id }, false);
-				const twice = applyDelta(
-					state(rsvp({ ...current.guest.rsvp!, drinks: once.drinks }), {
-						telegramUsername: current.telegramUsername
-					}),
-					{ kind: 'drink', id },
-					false
-				);
-				expect(new Set(twice.drinks)).toEqual(new Set(current.guest.rsvp!.drinks));
 			})
 		);
 	});

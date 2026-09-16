@@ -333,75 +333,27 @@ describe('answering in the bot', () => {
 		expect(lastText()).toContain(`/${commands.yes}`);
 	});
 
-	it('picks a dish and a drink by their numbers', async () => {
-		const chatId = newChatId();
-		const { guestId } = await answered(chatId);
-
-		await send('/course_2', chatId);
-		await send('/drink_1', chatId);
-
-		expect(await storedRsvp(guestId)).toMatchObject({ mainCourses: ['fish'], drinks: ['tea'] });
-	});
-
-	it('replaces the dish while the menu allows only one', async () => {
-		const chatId = newChatId();
-		const { guestId } = await answered(chatId);
-
-		await send('/course_1', chatId);
-		await send('/course_2', chatId);
-
-		expect(await storedRsvp(guestId)).toMatchObject({ mainCourses: ['fish'] });
-	});
-
-	it('takes a drink back when the guest taps it again', async () => {
-		const chatId = newChatId();
-		const { guestId } = await answered(chatId);
-
-		await send('/drink_2', chatId);
-		await send('/drink_2', chatId);
-
-		expect(await storedRsvp(guestId)).toMatchObject({ drinks: [] });
-	});
-
-	it('marks what is chosen in the state message', async () => {
+	it('shows a yes without any dish or drink list', async () => {
 		const chatId = newChatId();
 		await answered(chatId);
 
-		await send('/course_1', chatId);
+		await send('/rsvp', chatId);
 
-		expect(lastText()).toContain('✓ Плов');
-		expect(lastText()).toContain('Рыба /course_2');
+		expect(lastText()).toContain(content.rsvp.attendingYes);
+		expect(lastText()).not.toContain(content.rsvp.coursesLabel);
+		expect(lastText()).not.toContain(content.rsvp.drinksLabel);
+		expect(lastText()).not.toContain('TODO');
+		expect(lastText()).not.toContain('/course_');
 	});
 
-	it('refuses a dish that is not on the menu', async () => {
+	it('treats the old dish commands as unknown and changes nothing', async () => {
 		const chatId = newChatId();
 		const { guestId } = await answered(chatId);
 
-		await send('/course_9', chatId);
-
-		expect(lastText()).toBe(content.rsvp.unknownOption);
-		expect(await storedRsvp(guestId)).toMatchObject({ mainCourses: [] });
-	});
-
-	it('asks for an answer before a dish when none is on file', async () => {
-		const chatId = newChatId();
-		const { guestId } = await newGuest({ chatId });
-
 		await send('/course_1', chatId);
 
-		expect(lastText()).toContain('Сначала ответьте');
-		expect(await storedRsvp(guestId)).toBeUndefined();
-	});
-
-	it('asks for an answer before a dish when the guest said no', async () => {
-		const chatId = newChatId();
-		const { guestId } = await answered(chatId);
-		await send('/no', chatId);
-
-		await send('/course_1', chatId);
-
-		expect(lastText()).toContain('Сначала ответьте');
-		expect(await storedRsvp(guestId)).toMatchObject({ mainCourses: [] });
+		expect(lastText()).toContain('Что я умею');
+		expect(await storedRsvp(guestId)).toMatchObject({ attending: 'yes', mainCourses: [] });
 	});
 
 	it('keeps the companion and the free text a web answer left behind', async () => {
@@ -421,16 +373,16 @@ describe('answering in the bot', () => {
 			{ content, source: 'web', now: now() }
 		);
 
-		await send('/drink_1', chatId);
+		// Saying yes again resubmits the whole answer; nothing the web form stored is lost.
+		await send('/yes', chatId);
 
 		expect(await storedRsvp(guestId)).toMatchObject({
-			mainCourses: ['plov'],
-			drinks: ['tea'],
+			source: 'bot',
 			allergies: 'орехи',
 			comment: 'приедем к шести'
 		});
 		const companion = await findCompanion(db, guestId);
-		expect(companion).toMatchObject({ firstName: 'Анна', mainCourses: ['fish'] });
+		expect(companion).toMatchObject({ firstName: 'Анна', lastName: 'Гостева' });
 	});
 
 	it('queues the organizer notice for a bot edit', async () => {

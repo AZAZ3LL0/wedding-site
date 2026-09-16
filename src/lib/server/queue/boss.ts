@@ -82,7 +82,7 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 	const polling = { pollingIntervalSeconds: deps.pollingIntervalSeconds ?? 2 };
 	await boss.work<unknown>(RSVP_NOTIFY_ADMIN, polling, async ([job]) => {
 		if (job) {
-			await run(job, () => handleRsvpNotifyAdmin({ ...deps, menu: getContent().menu }, job.data));
+			await run(job, () => handleRsvpNotifyAdmin(deps, job.data));
 		}
 	});
 	await boss.work<unknown>(REMINDER_SCHEDULE, polling, async ([job]) => {

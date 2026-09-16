@@ -8,7 +8,7 @@ import type { GuestPublic, RsvpNotifyAdminJob, RsvpPayload } from '$lib/types';
 import { rsvpPayloadSchema } from '$lib/types';
 import type { TelegramClient } from './client';
 import { bindChat, findGuestByChat, type BoundGuest } from './repo';
-import { COURSE_PREFIX, DRINK_PREFIX, commands, templates, type BotContent } from './templates';
+import { commands, templates } from './templates';
 import { incoming, type BotCommand, type TelegramUpdate } from './update';
 
 export type BotDeps = {
@@ -116,21 +116,15 @@ async function readState(deps: BotDeps, guestId: string): Promise<BotRsvpState |
 	return { guest, telegramUsername, companion };
 }
 
-export type RsvpDelta =
-	| { kind: 'attending'; value: 'yes' | 'no' }
-	| { kind: 'course'; id: string }
-	| { kind: 'drink'; id: string };
+// The bot changes one thing: whether the guest comes. The site no longer asks about dishes.
+export type RsvpDelta = { kind: 'attending'; value: 'yes' | 'no' };
 
 /**
  * Turns the stored answer plus one tap into a full payload for `rsvpPayloadSchema`: the bot has
  * no form and no conversation state, so every change resubmits the whole answer (tech.md §13,
  * 5.4). Fields the guest did not touch, the companion included, come back unchanged.
  */
-export function applyDelta(
-	state: BotRsvpState,
-	delta: RsvpDelta,
-	multiSelect: boolean
-): RsvpPayload {
+export function applyDelta(state: BotRsvpState, delta: RsvpDelta): RsvpPayload {
 	const rsvp = state.guest.rsvp;
 	const base = {
 		attending: rsvp?.attending ?? 'yes',
@@ -145,41 +139,12 @@ export function applyDelta(
 		companion: state.companion
 	} satisfies RsvpPayload;
 
-	if (delta.kind === 'attending') return { ...base, attending: delta.value };
-	if (delta.kind === 'course') {
-		// One dish unless the menu allows several, matching the web form's radio or checkboxes.
-		return { ...base, mainCourses: multiSelect ? toggle(base.mainCourses, delta.id) : [delta.id] };
-	}
-	return { ...base, drinks: toggle(base.drinks, delta.id) };
+	return { ...base, attending: delta.value };
 }
 
-function toggle(ids: string[], id: string): string[] {
-	return ids.includes(id) ? ids.filter((other) => other !== id) : [...ids, id];
-}
-
-// Reads `/course_2` as the second dish of the menu; anything out of range is not a choice.
-export function menuChoice(
-	command: string,
-	prefix: string,
-	options: { id: string }[]
-): string | null {
-	if (!command.startsWith(prefix)) return null;
-	const index = Number(command.slice(prefix.length));
-	if (!Number.isInteger(index)) return null;
-	return options[index - 1]?.id ?? null;
-}
-
-function deltaOf(command: string, content: BotContent): RsvpDelta | 'unknown' | null {
+function deltaOf(command: string): RsvpDelta | null {
 	if (command === commands.yes) return { kind: 'attending', value: 'yes' };
 	if (command === commands.no) return { kind: 'attending', value: 'no' };
-	for (const [prefix, options, kind] of [
-		[COURSE_PREFIX, content.menu.courses, 'course'],
-		[DRINK_PREFIX, content.menu.drinks, 'drink']
-	] as const) {
-		if (!command.startsWith(prefix)) continue;
-		const id = menuChoice(command, prefix, options);
-		return id === null ? 'unknown' : { kind, id };
-	}
 	return null;
 }
 
@@ -190,18 +155,13 @@ async function change(
 	now: Date
 ): Promise<string> {
 	const content = deps.content;
-	const delta = deltaOf(command.command, content);
+	const delta = deltaOf(command.command);
 	if (delta === null) return templates.bot.help;
-	if (delta === 'unknown') return templates.bot.unknownChoice(content);
 
 	const state = await readState(deps, guest.guestId);
 	if (!state) return templates.bot.linkNeeded;
-	// A dish belongs to an answer that exists and says yes; otherwise the guest answers first.
-	if (delta.kind !== 'attending' && state.guest.rsvp?.attending !== 'yes') {
-		return templates.bot.answerFirst(content);
-	}
 
-	const payload = rsvpPayloadSchema.safeParse(applyDelta(state, delta, content.menu.multiSelect));
+	const payload = rsvpPayloadSchema.safeParse(applyDelta(state, delta));
 	if (!payload.success) return templates.bot.rejectedAnswer(content);
 
 	const result = await submitRsvp(deps.db, guest.guestId, payload.data, {
