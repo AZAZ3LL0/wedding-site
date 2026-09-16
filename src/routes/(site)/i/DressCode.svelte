@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ContentData } from '$lib/content/schema';
-	import { Divider, Heading, Reveal, Section } from '$lib/ui';
+	import { Heading, Reveal, Section } from '$lib/ui';
+	import Flourish from './Flourish.svelte';
 
 	type Props = {
 		dressCode: ContentData['dressCode'];
@@ -16,12 +17,11 @@
 <Section variant="light" aria-labelledby="dress-code-title" class="pt-0">
 	<Reveal>
 		<div class="mx-auto flex max-w-md flex-col items-center gap-6 text-center">
-			<div class="text-accent"><Divider orientation="vertical" /></div>
+			<Flourish />
 			<p class="eyebrow text-accent">{labels.eyebrow}</p>
-			<div id="dress-code-title">
+			<div id="dress-code-title" class="text-accent">
 				<Heading level={2} script>{labels.title}</Heading>
 			</div>
-			<p class="max-w-[30ch] text-xl leading-relaxed">{dressCode.text}</p>
 
 			{#if columns > 0}
 				<ul
@@ -31,7 +31,7 @@
 					{#each dressCode.palette as color (color.hex)}
 						<li class="flex flex-col items-center gap-3" data-swatch={color.hex}>
 							<span
-								class="aspect-square w-full max-w-18 rounded-full shadow-[inset_0_0_0_1px_rgb(47_42_34/0.12),0_6px_14px_rgb(47_42_34/0.12)]"
+								class="aspect-square w-full max-w-18 rounded-full shadow-[inset_0_0_0_1px_rgb(58_34_38/0.12),0_6px_14px_rgb(79_17_28/0.16)] ring-1 ring-gold/60 ring-offset-4 ring-offset-paper"
 								style:background-color={color.hex}
 								aria-hidden="true"
 							></span>
@@ -40,6 +40,8 @@
 					{/each}
 				</ul>
 			{/if}
+
+			<p class="max-w-[30ch] text-xl leading-relaxed text-ink/85 italic">{dressCode.text}</p>
 		</div>
 	</Reveal>
 </Section>
