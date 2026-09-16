@@ -64,6 +64,9 @@ export async function handleReminderSchedule(
 	const stage = stageFor(runDate, deps.event.date);
 	if (!stage) return 'skipped';
 
+	// The receipt makes the day itself run once. Queueing goes through pg-boss's own pool, not this
+	// transaction, so a rollback can leave jobs behind; `reminder.send` claims its row before it
+	// sends, which keeps that at one message per guest and stage.
 	const outcome = await withReceipt(deps.db, `${REMINDER_SCHEDULE}:${runDate}`, async () => {
 		for (const guestId of await listReminderTargets(deps.db)) {
 			await deps.sendReminder(guestId, stage);
