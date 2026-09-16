@@ -15,7 +15,6 @@
 	let { data, form } = $props();
 
 	const rsvp = $derived(data.content.rsvp);
-	const menu = $derived(data.content.menu);
 	// A failed post shows what the guest typed, not the saved answer.
 	const values = $derived(form?.values ?? data.values);
 	// Errors that belong to one field show next to it instead of above the form.
@@ -96,37 +95,6 @@
 							</Field>
 						{/if}
 
-						<Field label={rsvp.coursesLabel}>
-							{#snippet children(id)}
-								{#if menu.multiSelect}
-									<CheckboxGroup
-										name="mainCourses"
-										options={menu.courses}
-										values={values.mainCourses}
-										aria-labelledby="{id}-label"
-									/>
-								{:else}
-									<RadioGroup
-										name="mainCourses"
-										options={menu.courses}
-										value={values.mainCourses[0]}
-										aria-labelledby="{id}-label"
-									/>
-								{/if}
-							{/snippet}
-						</Field>
-
-						<Field label={rsvp.drinksLabel}>
-							{#snippet children(id)}
-								<CheckboxGroup
-									name="drinks"
-									options={menu.drinks}
-									values={values.drinks}
-									aria-labelledby="{id}-label"
-								/>
-							{/snippet}
-						</Field>
-
 						<Field label={rsvp.allergiesLabel}>
 							{#snippet children(id)}
 								<TextInput
@@ -197,35 +165,6 @@
 											/>
 										{/snippet}
 									</Field>
-									<Field label={rsvp.companionCourses}>
-										{#snippet children(id)}
-											{#if menu.multiSelect}
-												<CheckboxGroup
-													name="companionCourses"
-													options={menu.courses}
-													values={values.companionCourses}
-													aria-labelledby="{id}-label"
-												/>
-											{:else}
-												<RadioGroup
-													name="companionCourses"
-													options={menu.courses}
-													value={values.companionCourses[0]}
-													aria-labelledby="{id}-label"
-												/>
-											{/if}
-										{/snippet}
-									</Field>
-									<Field label={rsvp.companionDrinks}>
-										{#snippet children(id)}
-											<CheckboxGroup
-												name="companionDrinks"
-												options={menu.drinks}
-												values={values.companionDrinks}
-												aria-labelledby="{id}-label"
-											/>
-										{/snippet}
-									</Field>
 								</div>
 							</div>
 						{/if}
@@ -269,7 +208,7 @@
 </main>
 
 <style>
-	/* Pure CSS, so declining hides the menu with or without JavaScript. */
+	/* Pure CSS, so declining hides the details with or without JavaScript. */
 	.rsvp:has(:global(input[name='attending'][value='no']:checked)) .details {
 		display: none;
 	}

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { content } from '../../src/lib/content/wedding';
 import { SECRET_HEADER, WEBHOOK_SECRET, sendUpdate } from './telegram';
 
-const { entry, rsvp, thanks, menu } = content;
+const { entry, rsvp, thanks } = content;
 
 const form = (page: Page) => page.getByRole('form', { name: rsvp.title });
 
@@ -28,10 +28,6 @@ async function registerAndAnswer(page: Page): Promise<{ token: string; firstName
 
 	await page.goto('/rsvp');
 	await form(page).getByLabel(rsvp.attendingYes).check();
-	await form(page)
-		.getByRole('radiogroup', { name: rsvp.coursesLabel })
-		.getByLabel(menu.courses[0]!.label)
-		.check();
 	await form(page)
 		.getByRole('button', { name: new RegExp(`^(${rsvp.submit}|${rsvp.save})$`) })
 		.click();
