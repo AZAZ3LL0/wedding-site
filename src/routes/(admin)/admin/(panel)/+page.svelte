@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { admin } from '$lib/content/admin';
 	import Filters from './Filters.svelte';
 	import GuestTable from './GuestTable.svelte';
@@ -19,7 +20,10 @@
 >
 	<h1 class="text-xl font-semibold">{admin.title}</h1>
 	<div class="flex items-center gap-4">
-		<a href="/admin/export" class="text-sm text-slate-600 underline hover:text-slate-900">
+		<a
+			href={resolve('/admin/export')}
+			class="text-sm text-slate-600 underline hover:text-slate-900"
+		>
 			{admin.export.link}
 		</a>
 		<form method="post" action="?/signOut">
