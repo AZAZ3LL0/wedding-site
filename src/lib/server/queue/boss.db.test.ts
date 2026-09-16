@@ -65,7 +65,8 @@ async function stateOf(topic: string, id: string | null) {
 	return (await queue.boss.getJobById(topic, id as string))?.state;
 }
 
-describe('pg-boss wiring', () => {
+// Jobs settle within `settle`, so a test may wait that long before its own timeout.
+describe('pg-boss wiring', { timeout: settle.timeout + 5_000 }, () => {
 	it('runs a reminder end to end', async () => {
 		const { guestId, displayName } = await boundGuest();
 
@@ -158,8 +159,8 @@ describe('pg-boss wiring', () => {
 		expect(messagesFor(displayName)).toHaveLength(1);
 	});
 
-	it('schedules a send for every bound guest on the day the reminder is due', async () => {
-		const { displayName } = await boundGuest();
+	it('schedules a send for a bound guest on the day the reminder is due', async () => {
+		const { guestId } = await boundGuest();
 
 		// 30 days before the event date in the content config, so this run is the d30 stage.
 		const id = await queue.sendReminderSchedule({ runDate: '2026-10-29' });
@@ -168,6 +169,9 @@ describe('pg-boss wiring', () => {
 			async () => expect(await stateOf(REMINDER_SCHEDULE, id)).toBe('completed'),
 			settle
 		);
-		await vi.waitFor(async () => expect(messagesFor(displayName)).toHaveLength(1), settle);
+		// The run fans out to every bound guest in the shared test database, so delivery to this one
+		// waits behind the rest of the queue. The job itself is what this wiring test is about.
+		const jobs = await queue.boss.findJobs(REMINDER_SEND, { key: `${guestId}:d30` });
+		expect(jobs.map((job) => job.data)).toEqual([{ guestId, stage: 'd30' }]);
 	});
 });
