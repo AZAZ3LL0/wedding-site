@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { Button, Heading } from '$lib/ui';
+	import { Heading } from '$lib/ui';
 	import { sample } from '../fixtures';
 
 	let { data } = $props();
-	let sending = $state(false);
 
 	// The worker delivers asynchronously, so the page polls the fake inbox.
 	onMount(() => {
@@ -17,20 +15,6 @@
 
 <main class="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-section">
 	<Heading level={2}>{sample.telegram.title}</Heading>
-
-	<form
-		method="POST"
-		action="?/ping"
-		use:enhance={() => {
-			sending = true;
-			return async ({ update }) => {
-				await update();
-				sending = false;
-			};
-		}}
-	>
-		<Button variant="solid" type="submit" loading={sending}>{sample.telegram.send}</Button>
-	</form>
 
 	{#if data.messages.length === 0}
 		<p class="text-muted">{sample.telegram.empty}</p>

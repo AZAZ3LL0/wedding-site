@@ -1,6 +1,6 @@
 import type { ContentData } from '$lib/content/schema';
 import type { RsvpNotice } from '$lib/server/rsvp/repo';
-import type { RsvpPublic } from '$lib/types';
+import type { AttendStatus, ReminderStage, RsvpPublic } from '$lib/types';
 
 type Menu = Pick<ContentData['menu'], 'courses' | 'drinks'>;
 
@@ -184,10 +184,26 @@ function rsvpState({ rsvp }: BotAnswer, content: BotContent): string {
 	);
 }
 
+// One of three texts per stage, picked from the answer on file at send time (tech.md §5).
+function reminder(stage: ReminderStage, displayName: string, attending: AttendStatus | null) {
+	const head = `${displayName}, ${stage === 'd30' ? 'до свадьбы месяц' : 'до свадьбы неделя'}.`;
+	if (attending === null) {
+		return lines(head, 'Мы всё ещё ждём вашего ответа.', `Ответить — /${commands.rsvp}`);
+	}
+	if (attending === 'no') {
+		return lines(
+			head,
+			'Вы ответили, что прийти не получится.',
+			`Если планы изменились — /${commands.rsvp}`
+		);
+	}
+	return lines(head, 'Ждём вас!', `Изменить ответ — /${commands.rsvp}`);
+}
+
 // Every Telegram message text lives here.
 export const templates = {
-	demoPing: (pingId: string) => `Проверка очереди: демо-задача ${pingId} выполнена.`,
 	rsvpNotice,
+	reminder,
 	bot: {
 		help,
 		linkNeeded,

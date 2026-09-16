@@ -4,9 +4,10 @@ import { getContent } from '$lib/server/content';
 import { getDb, type Db } from '$lib/server/db';
 import { getTelegramClient } from '$lib/server/telegram';
 import { TelegramError, type TelegramClient } from '$lib/server/telegram/client';
-import type { RsvpNotifyAdminJob } from '$lib/types';
+import type { ReminderScheduleJob, ReminderSendJob, RsvpNotifyAdminJob } from '$lib/types';
 import { InvalidPayloadError } from './errors';
-import { DEMO_PING, handleDemoPing } from './jobs/demo-ping';
+import { REMINDER_SCHEDULE, handleReminderSchedule, todayAt } from './jobs/reminder-schedule';
+import { REMINDER_SEND, handleReminderSend, reminderSendKey } from './jobs/reminder-send';
 import {
 	RSVP_NOTIFY_ADMIN,
 	handleRsvpNotifyAdmin,
@@ -21,12 +22,15 @@ export type QueueDeps = {
 	// Tests shorten these so retries settle in seconds.
 	pollingIntervalSeconds?: number;
 	retryDelaySeconds?: number;
+	// Tests pin the clock the cron run date is read from.
+	now?: () => Date;
 };
 
 export type Queue = {
 	boss: PgBoss;
-	sendDemoPing(pingId?: string): Promise<string | null>;
 	sendRsvpNotifyAdmin(job: RsvpNotifyAdminJob): Promise<string | null>;
+	sendReminderSchedule(job: ReminderScheduleJob): Promise<string | null>;
+	sendReminderSend(job: ReminderSendJob): Promise<string | null>;
 	stop(): Promise<void>;
 };
 
@@ -37,6 +41,9 @@ function isPermanent(error: unknown): boolean {
 		(error instanceof TelegramError && error.kind === 'rejected')
 	);
 }
+
+// 07:00 UTC is 10:00 in Moscow, as tech.md §5 specifies.
+const REMINDER_CRON = '0 7 * * *';
 
 export async function startQueue(deps: QueueDeps): Promise<Queue> {
 	// pg-boss keeps its tables in the `pgboss` schema of the same database (tech.md §5).
@@ -50,8 +57,17 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 		retryDelay: deps.retryDelaySeconds ?? 5
 	};
 	// `stately` makes singletonKey reject a duplicate while the first job is queued or active.
-	await boss.createQueue(DEMO_PING, { ...retry, policy: 'stately' });
-	await boss.createQueue(RSVP_NOTIFY_ADMIN, { ...retry, policy: 'stately' });
+	for (const topic of [RSVP_NOTIFY_ADMIN, REMINDER_SCHEDULE, REMINDER_SEND]) {
+		await boss.createQueue(topic, { ...retry, policy: 'stately' });
+	}
+
+	const sendReminderSend = (job: ReminderSendJob) =>
+		boss.send(REMINDER_SEND, job, { ...retry, singletonKey: reminderSendKey(job) });
+	const sendReminderSchedule = (job: ReminderScheduleJob) =>
+		boss.send(REMINDER_SCHEDULE, job, {
+			...retry,
+			singletonKey: `${REMINDER_SCHEDULE}:${job.runDate}`
+		});
 
 	const run = async (job: Job<unknown>, handler: () => Promise<unknown>) => {
 		try {
@@ -64,21 +80,44 @@ export async function startQueue(deps: QueueDeps): Promise<Queue> {
 	};
 
 	const polling = { pollingIntervalSeconds: deps.pollingIntervalSeconds ?? 2 };
-	await boss.work<unknown>(DEMO_PING, polling, async ([job]) => {
-		if (job) await run(job, () => handleDemoPing(deps, job.data));
-	});
 	await boss.work<unknown>(RSVP_NOTIFY_ADMIN, polling, async ([job]) => {
 		if (job) {
 			await run(job, () => handleRsvpNotifyAdmin({ ...deps, menu: getContent().menu }, job.data));
 		}
 	});
+	await boss.work<unknown>(REMINDER_SCHEDULE, polling, async ([job]) => {
+		if (!job) return;
+		const event = getContent().event;
+		// pg-boss cron carries a fixed payload, so the scheduled run gets its date here.
+		const data =
+			job.data && typeof job.data === 'object' && 'runDate' in job.data
+				? job.data
+				: { runDate: todayAt(deps.now?.() ?? new Date(), event.utcOffset) };
+		await run(job, () =>
+			handleReminderSchedule(
+				{
+					db: deps.db,
+					event,
+					sendReminder: async (guestId, stage) => {
+						await sendReminderSend({ guestId, stage });
+					}
+				},
+				data
+			)
+		);
+	});
+	await boss.work<unknown>(REMINDER_SEND, polling, async ([job]) => {
+		if (job) await run(job, () => handleReminderSend(deps, job.data));
+	});
+
+	await boss.schedule(REMINDER_SCHEDULE, REMINDER_CRON, {}, retry);
 
 	return {
 		boss,
-		sendDemoPing: (pingId = crypto.randomUUID()) =>
-			boss.send(DEMO_PING, { pingId }, { ...retry, singletonKey: pingId }),
 		sendRsvpNotifyAdmin: (job) =>
 			boss.send(RSVP_NOTIFY_ADMIN, job, { ...retry, singletonKey: rsvpNotifyAdminKey(job) }),
+		sendReminderSchedule,
+		sendReminderSend,
 		stop: () => boss.stop({ graceful: true, timeout: 5_000 })
 	};
 }

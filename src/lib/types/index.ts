@@ -62,9 +62,6 @@ export type MatchResult =
 	| { kind: 'none' };
 
 // Job payloads, see tech.md §5. Handlers validate their input with these schemas.
-export const demoPingJobSchema = z.object({ pingId: z.uuid() });
-export type DemoPingJob = z.infer<typeof demoPingJobSchema>;
-
 export const rsvpNotifyAdminJobSchema = z.object({
 	guestId: z.uuid(),
 	kind: z.enum(['created', 'updated']),

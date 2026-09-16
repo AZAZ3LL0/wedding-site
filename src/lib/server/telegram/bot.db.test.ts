@@ -59,6 +59,8 @@ async function newGuest(options: { isPlusOne?: boolean; chatId?: number } = {}) 
 		.values({ title: `Гости ${suffix}`, audience: 'friends', plusOnePolicy: 'allowed' })
 		.returning({ id: parties.id });
 	const botToken = `token-${suffix}`;
+	// A companion belongs to an inviter, so the fixture keeps invariant 1 of tech.md section 4.
+	const invitedByGuestId = options.isPlusOne ? await inviterIn(party!.id, suffix) : null;
 	const [guest] = await db
 		.insert(guests)
 		.values({
@@ -68,11 +70,27 @@ async function newGuest(options: { isPlusOne?: boolean; chatId?: number } = {}) 
 			displayName: 'Петя',
 			nameKey: nameKey(`Пётр Гостев${suffix}`),
 			isPlusOne: options.isPlusOne ?? false,
+			invitedByGuestId,
 			telegramChatId: options.chatId ?? null,
 			botToken
 		})
 		.returning({ id: guests.id });
 	return { guestId: guest!.id, botToken };
+}
+
+async function inviterIn(partyId: string, suffix: string): Promise<string> {
+	const [inviter] = await db
+		.insert(guests)
+		.values({
+			partyId,
+			firstName: 'Ольга',
+			lastName: `Гостева${suffix}`,
+			displayName: 'Оля',
+			nameKey: nameKey(`Ольга Гостева${suffix}`),
+			botToken: `inviter-${suffix}`
+		})
+		.returning({ id: guests.id });
+	return inviter!.id;
 }
 
 function update(text: string, chatId: number) {

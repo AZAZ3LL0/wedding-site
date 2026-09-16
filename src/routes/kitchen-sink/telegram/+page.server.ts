@@ -1,7 +1,6 @@
-import { getAppQueue } from '$lib/server/queue/boss';
 import { getTelegramClient } from '$lib/server/telegram';
 import { FakeTelegramClient } from '$lib/server/telegram/fake';
-import type { Actions, PageServerLoad } from './$types';
+import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = () => {
 	const client = getTelegramClient();
@@ -9,12 +8,4 @@ export const load: PageServerLoad = () => {
 	return {
 		messages: sent.map((m) => ({ ...m, sentAt: m.sentAt.toISOString() })).reverse()
 	};
-};
-
-export const actions: Actions = {
-	ping: async () => {
-		const queue = await getAppQueue();
-		await queue.sendDemoPing();
-		return { queued: true };
-	}
 };
