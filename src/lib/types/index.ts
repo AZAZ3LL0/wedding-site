@@ -71,3 +71,12 @@ export const rsvpNotifyAdminJobSchema = z.object({
 	updatedAt: z.iso.datetime({ offset: true })
 });
 export type RsvpNotifyAdminJob = z.infer<typeof rsvpNotifyAdminJobSchema>;
+
+export const reminderScheduleJobSchema = z.object({ runDate: z.iso.date() });
+export type ReminderScheduleJob = z.infer<typeof reminderScheduleJobSchema>;
+
+export const reminderSendJobSchema = z.object({
+	guestId: z.uuid(),
+	stage: z.enum(['d30', 'd7'])
+});
+export type ReminderSendJob = z.infer<typeof reminderSendJobSchema>;
