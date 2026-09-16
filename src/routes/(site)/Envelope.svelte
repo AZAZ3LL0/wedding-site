@@ -22,11 +22,9 @@
 	let hint: HTMLElement;
 	let seal: HTMLElement;
 	let flap: HTMLElement;
-	let card: HTMLElement;
+	let stage: HTMLElement;
 	let roses: HTMLElement[] = $state([]);
 	let opening = $state(false);
-	// Past upright the flap lies behind the envelope and the card shows, rising in front of it.
-	let flapOpen = $state(false);
 	let artReady = $state(false);
 
 	function releaseArt() {
@@ -80,12 +78,6 @@
 			{ transform: ['perspective(1400px) rotateX(0deg)', 'perspective(1400px) rotateX(-178deg)'] },
 			{ ...plan.flap, ease: [0.6, 0, 0.3, 1] }
 		);
-		setTimeout(() => (flapOpen = true), (plan.flap.delay + plan.flap.duration / 2) * 1000);
-		animate(
-			card,
-			{ transform: ['translateY(0) scale(0.96)', 'translateY(-78%) scale(1.04)'] },
-			{ ...plan.card, ease }
-		);
 		roses.forEach((rose, index) =>
 			animate(
 				rose,
@@ -93,6 +85,8 @@
 				{ ...plan.flowers, delay: plan.flowers.delay + index * 0.18, ease }
 			)
 		);
+		// The envelope sinks a little as it fades, handing the screen to the card underneath.
+		animate(stage, { transform: ['translateY(0)', 'translateY(6%)'] }, { ...plan.fade, ease });
 		await animate(root, { opacity: [1, 0] }, { ...plan.fade, ease: 'easeOut' }).finished.catch(
 			() => undefined
 		);
@@ -103,14 +97,13 @@
 <!-- Fresh wax over the rose pressed into the photo, carrying the hosts' monogram instead. -->
 {#snippet wax(place: string)}
 	<span class="wax {place}" aria-hidden="true">
-		<span class="monogram"><ScriptText text={envelope.monogram} /></span>
+		<span class="monogram">{envelope.monogram}</span>
 	</span>
 {/snippet}
 
 <div
 	class="envelope"
 	class:opening
-	class:flap-open={flapOpen}
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby="{id}-title"
@@ -123,18 +116,8 @@
 		<p class="title" id="{id}-title"><ScriptText text={envelope.title} /></p>
 	</div>
 
-	<div class="stage">
+	<div class="stage" bind:this={stage}>
 		<div class="inside" aria-hidden="true"></div>
-
-		<div class="card" aria-hidden="true" bind:this={card}>
-			<img
-				src={artReady ? '/images/invitation-card.webp' : undefined}
-				alt=""
-				width="540"
-				height="957"
-				decoding="async"
-			/>
-		</div>
 
 		<div class="body" aria-hidden="true"></div>
 
@@ -223,10 +206,12 @@
 		text-shadow: 0 2px 14px color-mix(in oklab, black 45%, transparent);
 	}
 
+	/* «Алина Кыз Узату» runs 7.5 em wide: 11vw keeps it on one line with a margin on any phone. */
 	.title {
 		font-family: var(--font-script);
-		font-size: clamp(3.6rem, 16vw, 5.5rem);
+		font-size: clamp(2.2rem, 11vw, 5rem);
 		line-height: 1.05;
+		white-space: nowrap;
 		color: color-mix(in oklab, var(--c-gold) 55%, var(--c-ivory));
 	}
 
@@ -258,26 +243,6 @@
 		);
 	}
 
-	/* The invitation waits in the pocket, between the inside and the front of the envelope. */
-	.card {
-		position: absolute;
-		z-index: 1;
-		top: 5%;
-		left: 50%;
-		width: 28%;
-		margin-left: -14%;
-		/* Hidden in the pocket until the flap is out of the way: it would show through the faded edges. */
-		opacity: 0;
-		transform-origin: 50% 100%;
-		filter: drop-shadow(0 10px 18px color-mix(in oklab, black 45%, transparent));
-	}
-
-	.card img {
-		display: block;
-		width: 100%;
-		height: auto;
-	}
-
 	.body {
 		z-index: 2;
 		background: url('/images/envelope.webp') center / 100% 100%;
@@ -292,14 +257,6 @@
 		transform-origin: 50% 0;
 		/* No filter here: a filter flattens 3D, and the back of the flap would never turn around. */
 		transform-style: preserve-3d;
-	}
-
-	.flap-open .flap {
-		z-index: 0;
-	}
-
-	.flap-open .card {
-		opacity: 1;
 	}
 
 	.flap-front,
@@ -404,10 +361,12 @@
 		translate: -50% -50%;
 	}
 
+	/* A thin roman capital, pressed into the wax like a signet. */
 	.monogram {
-		translate: 0 6%;
-		font-family: var(--font-script);
-		font-size: calc(var(--stage-w) * 0.1);
+		translate: 0 3%;
+		font-family: var(--font-display);
+		font-size: calc(var(--stage-w) * 0.085);
+		font-weight: 300;
 		line-height: 1;
 		background: linear-gradient(160deg, #fbe7b0, var(--c-gold) 45%, #8a6424 80%);
 		background-clip: text;
@@ -427,7 +386,7 @@
 		pointer-events: none;
 	}
 
-	/* Roses grow into two corners of the screen as the card comes out. */
+	/* Roses grow into two corners of the screen as the envelope opens. */
 	.rose {
 		position: absolute;
 		z-index: 7;
