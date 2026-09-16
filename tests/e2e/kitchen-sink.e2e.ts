@@ -34,7 +34,7 @@ test('kitchen-sink applies design tokens and fonts', async ({ page }) => {
 		await document.fonts.ready;
 		return [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family);
 	});
-	expect(new Set(loaded)).toEqual(new Set(['Cormorant Garamond', 'Great Vibes']));
+	expect(new Set(loaded)).toEqual(new Set(['Cormorant Garamond', 'Wedding Script', 'Great Vibes']));
 });
 
 test('kitchen-sink renders every primitive from §8', async ({ page }) => {
