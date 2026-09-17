@@ -188,12 +188,14 @@
 		color: color-mix(in oklab, var(--c-accent) 88%, var(--c-ink));
 	}
 
+	/* Sized to the panel like the title, so the date stays on one line on a 320 px phone. */
 	.when {
 		display: flex;
 		flex-direction: column;
 		font-family: var(--font-display);
-		font-size: clamp(1.9rem, 8.6vw, 2.4rem);
+		font-size: min(2.4rem, calc(var(--w) * 0.12));
 		line-height: 1.1;
+		white-space: nowrap;
 		font-variant-numeric: lining-nums tabular-nums;
 	}
 
