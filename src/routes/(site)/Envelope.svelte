@@ -3,13 +3,7 @@
 	import { onMount } from 'svelte';
 	import { motionTokens } from '$lib/actions/motion-tokens';
 	import type { ContentData } from '$lib/content/schema';
-	import {
-		ENVELOPE_ART,
-		ENVELOPE_LEAVING,
-		ENVELOPE_OPENED,
-		openingPlan,
-		rememberOpened
-	} from './envelope';
+	import { ENVELOPE_LEAVING, ENVELOPE_OPENED, openingPlan, rememberOpened } from './envelope';
 
 	type Props = {
 		envelope: ContentData['envelope'];
@@ -30,24 +24,11 @@
 	let stage: HTMLElement;
 	let opening = $state(false);
 
-	function releaseArt() {
-		document.documentElement.classList.add(ENVELOPE_ART);
-	}
-
 	onMount(() => {
 		// Tells the failsafe in app.html that JS is alive; otherwise it hides the envelope.
 		document.documentElement.dataset.revealReady = '';
 		// CSS decides visibility (JS, reduced motion, already opened), the component only follows it.
-		const covering = getComputedStyle(root).display !== 'none';
-		oncover?.(covering);
-		if (!covering) return releaseArt();
-		// Decoding the preloaded photo resolves once the envelope can paint; a failure still lets go.
-		const photo = new Image();
-		photo.src = '/images/envelope.webp';
-		photo
-			.decode()
-			.catch(() => undefined)
-			.finally(releaseArt);
+		oncover?.(getComputedStyle(root).display !== 'none');
 	});
 
 	function finish() {

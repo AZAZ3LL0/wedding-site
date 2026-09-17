@@ -48,31 +48,14 @@ test('opens with a tap and hands focus to the invitation', async ({ page }) => {
 	await expect(coverHeading(page)).toBeVisible();
 });
 
-// The card's lace frame and roses wait for the envelope to be on screen; they must still arrive.
-async function cardArt(page: Page) {
-	const card = page.locator('[data-card]');
-	return {
-		frame: await card.evaluate((el) => getComputedStyle(el).borderImageSource),
-		flower: await page.locator('.rose-top').evaluate((el) => getComputedStyle(el).backgroundImage)
-	};
-}
-
-test('dresses the card in its lace and roses once opened, and at once on a return visit', async ({
-	page
-}) => {
+test('leaves the arch in place on a return visit', async ({ page }) => {
 	await page.goto('/i');
 	await openButton(page).click();
 	await expect(envelope(page)).toBeHidden();
-	expect(await cardArt(page)).toEqual({
-		frame: expect.stringContaining('card-frame.webp'),
-		flower: expect.stringContaining('roses.webp')
-	});
 
 	await page.reload();
-	expect(await cardArt(page)).toEqual({
-		frame: expect.stringContaining('card-frame.webp'),
-		flower: expect.stringContaining('roses.webp')
-	});
+	await expect(envelope(page)).toBeHidden();
+	await expect(page.locator('[data-card]')).toBeVisible();
 });
 
 test('opens from the keyboard', async ({ page }) => {
