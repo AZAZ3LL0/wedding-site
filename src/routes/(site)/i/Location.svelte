@@ -26,7 +26,7 @@
 	<div class="mx-auto mt-10 flex max-w-md flex-col gap-10">
 		{#each list as place, index (place.key)}
 			<Reveal delay={index * 150}>
-				<div data-place={place.key}>
+				<div class="framed" data-place={place.key}>
 					<MapCard
 						title={place.title}
 						address={place.address}
@@ -39,3 +39,43 @@
 		{/each}
 	</div>
 </Section>
+
+<style>
+	/* Burgundy lace laid under the card, as in the printed invitation: only its edge shows. */
+	.framed {
+		position: relative;
+		isolation: isolate;
+	}
+
+	.framed::before,
+	.framed::after {
+		content: '';
+		position: absolute;
+		left: 50%;
+		z-index: -1;
+		width: calc(100% + 1.5rem);
+		/* The fringe cut out of the photo, 410 by 82, laid across the card's width. */
+		aspect-ratio: 410 / 82;
+		translate: -50% 0;
+		background-color: var(--c-accent);
+		mask-image: url('/images/lace-edge.png');
+		mask-size: 100% 100%;
+		mask-position: center;
+		mask-repeat: no-repeat;
+	}
+
+	.framed::before {
+		bottom: calc(100% - 1.25rem);
+		rotate: 180deg;
+	}
+
+	.framed::after {
+		top: calc(100% - 1.25rem);
+	}
+
+	/* Same gate as the arch: the lace waits for the envelope instead of loading with the first screen. */
+	:global(html.js:not(.envelope-opened):not(.envelope-art)) .framed::before,
+	:global(html.js:not(.envelope-opened):not(.envelope-art)) .framed::after {
+		display: none;
+	}
+</style>
