@@ -16,5 +16,10 @@ wedding.alina-samat.ru:2096 {
 		-Server
 	}
 
+	# adapter-node sends no cache headers for static/, so a returning guest refetched every font
+	# and photo. Fonts never change; images keep their names when replaced, so they expire sooner.
+	header /fonts/* Cache-Control "public, max-age=2592000"
+	header /images/* Cache-Control "public, max-age=86400"
+
 	reverse_proxy 127.0.0.1:3000
 }
