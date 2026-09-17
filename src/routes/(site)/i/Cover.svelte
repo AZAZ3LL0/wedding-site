@@ -20,9 +20,11 @@
 		<span class="title-line">{cover.eyebrow}</span>
 	</h1>
 
-	<!-- The arch of the printed invitation: deep burgundy, the date cut into it in cream. -->
+	<!-- The arch of the printed invitation: tooled velvet ending in lace, the date in gold on it. -->
 	<section class="arch" data-card>
-		<!-- Damask pressed into the cloth, a shade lighter than the arch itself. -->
+		<div class="cloth" aria-hidden="true"></div>
+
+		<!-- Damask pressed into the cloth, a shade lighter than the velvet itself. -->
 		<svg class="emboss" viewBox="0 0 240 40" fill="none" aria-hidden="true">
 			<path
 				d="M120 6c-9 0-15 7-15 14s6 14 15 14 15-7 15-14-6-14-15-14Zm0 5c6 0 10 4 10 9s-4 9-10 9-10-4-10-9 4-9 10-9Z"
@@ -50,6 +52,9 @@
 
 <style>
 	.scene {
+		/* Viewport units, so the value is the same wherever it is substituted. */
+		--w: min(100vw - 2.5rem, 30rem);
+
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -80,29 +85,62 @@
 	 * hung behind the date rather than as a card.
 	 */
 	.arch {
+		--lace: calc(var(--w) * 0.676); /* the lace photo is 410 by 277 */
+
+		position: relative;
+		isolation: isolate;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		gap: clamp(1.25rem, 5vw, 1.75rem);
-		width: min(100% - 2.5rem, 30rem);
+		width: var(--w);
 		min-height: min(78svh, 34rem);
-		padding: clamp(2.5rem, 10vw, 4rem) clamp(1.5rem, 7vw, 3rem) clamp(3rem, 12vw, 4.5rem);
-		border-radius: 50% 50% 0 0 / 28% 28% 0 0;
-		color: var(--c-ivory);
+		padding: clamp(2.5rem, 10vw, 4rem) clamp(1.5rem, 7vw, 3rem) calc(var(--lace) * 0.98);
+		color: var(--c-gold);
 		text-align: center;
+	}
+
+	/*
+	 * The cloth carries the velvet and the shape, so the lace mask never cuts into the text. Two mask
+	 * layers add up: the photo's own alpha along the bottom, and a plain block over everything above it.
+	 */
+	.cloth {
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		border-radius: 50% 50% 0 0 / 28% 28% 0 0;
 		background:
 			radial-gradient(
 				ellipse 80% 45% at 50% 0%,
-				color-mix(in oklab, var(--c-accent) 45%, transparent),
+				color-mix(in oklab, var(--c-accent) 35%, transparent),
 				transparent
 			),
-			var(--c-accent-deep);
+			url('/images/velvet.jpg') center / cover var(--c-accent-deep);
+		mask-image: url('/images/lace-mask.png'), linear-gradient(#000, #000);
+		mask-size:
+			100% auto,
+			/* 2px of overlap: without it the two layers leave a hairline across the cloth. */ 100%
+				calc(100% - var(--lace) + 2px);
+		mask-position:
+			bottom center,
+			top center;
+		mask-repeat: no-repeat, no-repeat;
+	}
+
+	/*
+	 * Under a closed envelope the velvet and the lace are not fetched until the envelope is on screen
+	 * (see ENVELOPE_ART). Without JS, on a return visit or with reduced motion this never matches.
+	 * Longhands on purpose: the CSS minifier empties a `background: none` shorthand.
+	 */
+	:global(html.js:not(.envelope-opened):not(.envelope-art)) .cloth {
+		background-image: none;
+		mask-image: none;
 	}
 
 	.emboss {
 		width: clamp(9rem, 45%, 13rem);
 		/* Barely lighter than the cloth: a pressed pattern, not an applied ornament. */
-		color: color-mix(in oklab, var(--c-ivory) 12%, transparent);
+		color: color-mix(in oklab, var(--c-gold) 18%, transparent);
 	}
 
 	.when {
@@ -127,11 +165,12 @@
 		font-variant-numeric: lining-nums tabular-nums;
 	}
 
+	/* Lighter and closer to the day than the figures, as on the printed card. */
 	.month {
-		margin: 0.06em 0;
+		margin: -0.06em 0 -0.02em;
 		font-family: var(--font-script);
-		font-size: min(4rem, 17vw);
-		line-height: 1.1;
+		font-size: min(3.25rem, 14vw);
+		line-height: 1.05;
 	}
 
 	.at {
@@ -139,7 +178,7 @@
 		font-family: var(--font-display);
 		font-size: min(1.75rem, 7vw);
 		letter-spacing: 0.08em;
-		color: color-mix(in oklab, var(--c-ivory) 80%, transparent);
+		color: color-mix(in oklab, var(--c-gold) 85%, transparent);
 		font-variant-numeric: lining-nums tabular-nums;
 	}
 
@@ -148,7 +187,8 @@
 		margin-top: auto;
 		font-size: clamp(1rem, 4.2vw, 1.125rem);
 		line-height: 1.45;
-		color: color-mix(in oklab, var(--c-ivory) 88%, transparent);
+		/* Lifted towards the cream: gold this small reads poorly on the dark velvet. */
+		color: color-mix(in oklab, var(--c-gold) 55%, var(--c-ivory));
 	}
 
 	/* As the envelope fades the arch rises into place; after that, it just is. */
