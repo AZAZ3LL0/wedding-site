@@ -48,14 +48,30 @@ test('opens with a tap and hands focus to the invitation', async ({ page }) => {
 	await expect(coverHeading(page)).toBeVisible();
 });
 
-test('leaves the arch in place on a return visit', async ({ page }) => {
+// The arch's velvet and lace wait for the envelope to be on screen; they must still arrive.
+const cloth = (page: Page) =>
+	page.locator('.cloth').evaluate((el) => {
+		const style = getComputedStyle(el);
+		return { velvet: style.backgroundImage, lace: style.maskImage };
+	});
+
+test('dresses the arch in velvet and lace once opened, and at once on a return visit', async ({
+	page
+}) => {
 	await page.goto('/i');
 	await openButton(page).click();
 	await expect(envelope(page)).toBeHidden();
+	expect(await cloth(page)).toEqual({
+		velvet: expect.stringContaining('velvet.jpg'),
+		lace: expect.stringContaining('lace-mask.png')
+	});
 
 	await page.reload();
-	await expect(envelope(page)).toBeHidden();
 	await expect(page.locator('[data-card]')).toBeVisible();
+	expect(await cloth(page)).toEqual({
+		velvet: expect.stringContaining('velvet.jpg'),
+		lace: expect.stringContaining('lace-mask.png')
+	});
 });
 
 test('opens from the keyboard', async ({ page }) => {
