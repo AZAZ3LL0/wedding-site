@@ -51,7 +51,7 @@ if [ ! -f "$root/shared/postgres.env" ]; then
 		PUBLIC_SITE_URL=https://wedding.alina-samat.ru
 		TELEGRAM_BOT_TOKEN=
 		TELEGRAM_BOT_USERNAME=
-		TELEGRAM_WEBHOOK_SECRET=
+		TELEGRAM_WEBHOOK_SECRET=$(openssl rand -hex 32)
 		TELEGRAM_ADMIN_CHAT_ID=
 		ADMIN_PASSWORD=$(openssl rand -base64 18)
 		SESSION_SECRET=$(openssl rand -hex 32)
