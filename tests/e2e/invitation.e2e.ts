@@ -1,28 +1,32 @@
 import { expect, test } from '@playwright/test';
+import { monthName } from '../../src/lib/content/event';
 import { content } from '../../src/lib/content/wedding';
 import { signIn } from './guest';
 
-// These checks are about the card, not the envelope that covers it on a first visit.
+// These checks are about the arch, not the envelope that covers it on a first visit.
 test.beforeEach(async ({ page, context, baseURL }) => {
 	await signIn(context, baseURL!);
 	await page.addInitScript(() => sessionStorage.setItem('envelope-opened', '1'));
 });
 
-test('invitation card shows the event from the content config', async ({ page }) => {
+test('invitation arch shows the event from the content config', async ({ page }) => {
 	await page.goto('/i');
 
-	const card = page.locator('[data-card]');
 	// Script headings paint a real capital A, so the heading is checked by what it reads as.
-	await expect(card.getByRole('heading', { level: 1 })).toHaveAccessibleName(
+	await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName(
 		`${content.cover.title} ${content.cover.eyebrow}`
 	);
-	await expect(card.getByText(content.cover.text)).toBeVisible();
-	await expect(card.locator(`time[datetime="${content.event.date}"]`)).toHaveText('28 | 11 | 2026');
-	await expect(card.getByText(content.event.time)).toBeVisible();
-	await expect(card.getByText(content.venue.address)).toBeVisible();
-	await expect(card.getByText(content.venue.title)).toBeVisible();
 
-	// The date line and the greeting repeated the card, so they are gone from below it.
+	const arch = page.locator('[data-card]');
+	// The date is cut into the arch as three lines: day, month in words, year.
+	const date = arch.locator(`time[datetime="${content.event.date}"]`);
+	await expect(date).toHaveText(`28 ${monthName(content.event.date, content.ui.months)} 2026`);
+	await expect(arch.getByText(content.event.time)).toBeVisible();
+	await expect(arch.getByText(content.cover.text)).toBeVisible();
+	// The venue belongs to the section below, not to the arch.
+	await expect(arch.getByText(content.venue.title)).toHaveCount(0);
+
+	// The date line and the greeting repeated the arch, so they are gone from below it.
 	await expect(page.getByText(content.invitation.dateLine)).toHaveCount(0);
 	await expect(page.locator('[data-welcome]')).toHaveCount(0);
 	// The countdown aims at the local start in Astrakhan, not at the guest's time zone.

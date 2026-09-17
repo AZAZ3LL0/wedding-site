@@ -21,18 +21,24 @@ test('no page scrolls sideways on a 320 px phone', async ({ page, context, baseU
 	}
 });
 
-test('the card keeps the date on one line on a 320 px phone', async ({
+test('the arch keeps every date line whole on a 320 px phone', async ({
 	page,
 	context,
 	baseURL
 }) => {
 	await signIn(context, baseURL!);
 	await page.goto('/i');
-	const date = page.locator('[data-card] time').first();
-	await expect(date).toBeVisible();
+	const lines = page.locator('[data-card] time span');
+	await expect(lines.first()).toBeVisible();
 	await page.evaluate(() => document.fonts.ready);
-	const lines = await date.evaluate(
-		(el) => el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)
-	);
-	expect(lines).toBeLessThan(1.5);
+	// Day, month and year: each is one line, and none of them is wider than the arch.
+	await expect(lines).toHaveCount(3);
+	for (const line of await lines.all()) {
+		const { rows, fits } = await line.evaluate((el) => ({
+			rows: el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight),
+			fits: el.getBoundingClientRect().width <= el.closest('[data-card]')!.clientWidth
+		}));
+		expect(rows).toBeLessThan(1.5);
+		expect(fits).toBe(true);
+	}
 });
