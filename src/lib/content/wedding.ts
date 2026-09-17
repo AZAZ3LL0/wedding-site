@@ -2,14 +2,14 @@
 import type { Content } from './schema';
 
 export const content = {
-	couple: { bride: 'Алина', groom: 'TODO' },
+	couple: { bride: 'Алина', groom: 'Самат' },
 	hosts: 'Семья Тулешовых',
 	event: {
 		title: 'Кыз Узату',
 		date: '2026-11-28',
 		time: '17:00',
 		utcOffset: '+04:00', // Astrakhan
-		rsvpDeadline: '2026-11-14', // TODO
+		rsvpDeadline: '2026-11-14',
 		city: 'Астрахань'
 	},
 	envelope: {
@@ -23,7 +23,7 @@ export const content = {
 		eyebrow: 'Кыз Узату!',
 		title: 'Алина',
 		text: 'С огромной радостью приглашаем вас на наш особенный день и разделить с нами эту трогательную и важную дату.',
-		photo: { src: '/images/cover.svg', alt: 'TODO' }
+		photo: { src: '/images/cover.svg', alt: 'Оливковый фон открытки' }
 	},
 	invitation: {
 		eyebrow: 'Ждём вас в',
@@ -37,7 +37,7 @@ export const content = {
 		title: 'Банкетный зал «Европейский»',
 		address: 'г. Астрахань, Каспийская улица, 2Б',
 		startTime: '17:00',
-		endTime: 'TODO',
+		endTime: '00:00',
 		// The venue's own card: a search by the address text lands on a different Каспийская, 4А.
 		mapUrl: 'https://2gis.ru/astrakhan/firm/70000001047661941',
 		photos: []
@@ -57,12 +57,14 @@ export const content = {
 	gifts: null,
 	transfer: null,
 	contacts: [],
+	// The venue sets one menu for everyone, so the form does not ask about dishes and drinks.
 	menu: {
 		multiSelect: false,
-		courses: [{ id: 'todo-course', label: 'TODO' }],
-		drinks: [{ id: 'todo-drink', label: 'TODO' }]
+		courses: [],
+		drinks: []
 	},
-	music: { enabled: true, src: '/audio/TODO.mp3' },
+	// Off until the track arrives: drop it at static/audio/music.mp3 and switch this on.
+	music: { enabled: false, src: '/audio/music.mp3' },
 	sections: {
 		location: {
 			eyebrow: 'Место',
@@ -93,7 +95,7 @@ export const content = {
 		ctaAnswered: 'Посмотреть ответ',
 		eyebrow: 'Ответ на приглашение',
 		title: 'Будете с нами?',
-		deadline: 'Просим ответить до 14 ноября', // TODO: together with event.rsvpDeadline
+		deadline: 'Просим ответить до 14 ноября',
 		attendingLabel: 'Ваш ответ',
 		attendingYes: 'С радостью приду',
 		attendingNo: 'К сожалению, не смогу',
