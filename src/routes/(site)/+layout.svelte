@@ -1,12 +1,31 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { AudioToggle } from '$lib/ui';
 
 	let { data, children } = $props();
 
 	const music = $derived(data.content.music);
+	const preview = $derived({
+		title: data.content.entry.eyebrow,
+		description: data.content.cover.text,
+		// Messengers fetch the image on their own and need an absolute URL.
+		image: new URL(data.content.cover.photo.src, page.url.origin).href,
+		imageAlt: data.content.cover.photo.alt
+	});
 </script>
 
 <svelte:head>
+	<!-- The link guests share is `/`; messengers read these tags for the preview card. -->
+	<meta name="description" content={preview.description} />
+	<meta property="og:type" content="website" />
+	<meta property="og:locale" content="ru_RU" />
+	<meta property="og:site_name" content={data.content.hosts} />
+	<meta property="og:title" content={preview.title} />
+	<meta property="og:description" content={preview.description} />
+	<meta property="og:url" content={page.url.origin} />
+	<meta property="og:image" content={preview.image} />
+	<meta property="og:image:alt" content={preview.imageAlt} />
+	<meta name="twitter:card" content="summary_large_image" />
 	<!-- Cyrillic subsets draw the first screen; preloading them keeps the text from swapping late. -->
 	<link
 		rel="preload"

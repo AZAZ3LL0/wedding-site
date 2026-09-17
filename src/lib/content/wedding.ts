@@ -23,7 +23,8 @@ export const content = {
 		eyebrow: 'Кыз Узату!',
 		title: 'Алина',
 		text: 'С огромной радостью приглашаем вас на наш особенный день и разделить с нами эту трогательную и важную дату.',
-		photo: { src: '/images/cover.svg', alt: 'Оливковый фон открытки' }
+		// The card no longer frames a photo; this one is the link preview in messengers.
+		photo: { src: '/images/og.jpg', alt: 'Бордовый конверт с сургучной печатью' }
 	},
 	invitation: {
 		eyebrow: 'Ждём вас в',
