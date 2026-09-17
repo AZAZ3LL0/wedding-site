@@ -29,7 +29,16 @@ test('invitation card shows the event from the content config', async ({ page })
 	await expect(page.locator('time[datetime="2026-11-28T17:00:00+04:00"]')).toBeVisible();
 });
 
+test('no player shows while the music is switched off', async ({ page }) => {
+	test.skip(content.music.enabled, 'the track is on');
+	await page.goto('/i');
+	await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+	await expect(page.getByRole('button', { name: content.ui.audio.play })).toHaveCount(0);
+	await expect(page.locator('audio')).toHaveCount(0);
+});
+
 test('sound is off until the guest turns it on', async ({ page }) => {
+	test.skip(!content.music.enabled, 'the track is off');
 	await page.goto('/i');
 	const toggle = page.getByRole('button', { name: content.ui.audio.play });
 	const audio = page.locator('audio');
