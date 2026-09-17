@@ -93,13 +93,6 @@
 	}
 </script>
 
-<!-- Fresh wax over the rose pressed into the photo, carrying the hosts' monogram instead. -->
-{#snippet wax(place: string)}
-	<span class="wax {place}" aria-hidden="true">
-		<span class="monogram">{envelope.monogram}</span>
-	</span>
-{/snippet}
-
 <div
 	class="envelope"
 	class:opening
@@ -121,16 +114,13 @@
 		<div class="body" aria-hidden="true"></div>
 
 		<div class="flap" aria-hidden="true" bind:this={flap}>
-			<div class="flap-front">
-				{@render wax('flap-wax')}
-			</div>
+			<div class="flap-front"></div>
 			<div class="flap-back"></div>
 		</div>
 
 		<!-- The seal is the one control: pointer, keyboard and screen readers all open it here. -->
 		<button type="button" class="seal" aria-label={envelope.open} onclick={open} bind:this={seal}>
-			<img src="/images/envelope-seal.webp" alt="" width="160" height="160" />
-			{@render wax('seal-wax')}
+			<img src="/images/envelope-seal.webp" alt="" width="295" height="295" />
 		</button>
 	</div>
 
@@ -140,15 +130,12 @@
 <style>
 	.envelope {
 		/*
-		 * The photo is 735 by 490. Its layers are cut along the lace in percentages of that frame:
-		 * the flap runs from the top corners down each side to a tip under the seal.
+		 * The photo is 720 by 1280. The flap is the triangle whose sides run from the top edge down
+		 * to the tip under the wax seal; the rest of the photo stays put while it opens.
 		 */
-		--flap: polygon(0 0, 100% 0, 100% 28.57%, 50.2% 86.12%, 0 26.94%);
-		--stage-w: min(135vw, 86svh * 1.5, 900px);
-		/* All four photo edges melt into the backdrop, so the rectangle of the photo never shows. */
-		--photo-fade:
-			linear-gradient(transparent, black 16%, black 84%, transparent),
-			linear-gradient(90deg, transparent, black 9%, black 91%, transparent);
+		--flap: polygon(10.5% 0, 77% 0, 50% 47%);
+		/* The whole envelope fits on screen; the blurred backdrop fills whatever is left over. */
+		--stage-w: min(100vw, 100svh * 0.5625);
 
 		position: fixed;
 		inset: 0;
@@ -179,7 +166,7 @@
 
 	.heading {
 		position: absolute;
-		top: max(6svh, calc(50svh - var(--stage-w) / 3 - 9.5rem));
+		top: 6svh;
 		right: 0;
 		left: 0;
 		z-index: 6;
@@ -192,10 +179,9 @@
 		text-shadow: 0 2px 14px color-mix(in oklab, black 45%, transparent);
 	}
 
-	/* «Алина Кыз Узату» runs 9.6 em wide: 9.2vw keeps it on one line with a margin on any phone. */
 	.title {
 		font-family: var(--font-script);
-		font-size: clamp(1.8rem, 9.2vw, 4rem);
+		font-size: clamp(2.25rem, 13vw, 4.5rem);
 		line-height: 1.05;
 		white-space: nowrap;
 		color: color-mix(in oklab, var(--c-gold) 55%, var(--c-ivory));
@@ -207,20 +193,24 @@
 		top: 50%;
 		left: 50%;
 		width: var(--stage-w);
-		aspect-ratio: 735 / 490;
+		aspect-ratio: 720 / 1280;
 		translate: -50% -50%;
 	}
 
-	/* The photo layers share one frame and one edge fade. */
 	.inside,
 	.body {
 		position: absolute;
 		inset: 0;
-		mask: var(--photo-fade);
-		mask-composite: intersect;
 	}
 
+	.body {
+		z-index: 2;
+		background: url('/images/envelope.webp') center / 100% 100%;
+	}
+
+	/* Behind the flap and over the envelope: what the guest sees once the flap swings up. */
 	.inside {
+		z-index: 3;
 		clip-path: var(--flap);
 		background: radial-gradient(
 			ellipse 60% 70% at 50% 20%,
@@ -229,17 +219,10 @@
 		);
 	}
 
-	.body {
-		z-index: 2;
-		background: url('/images/envelope.webp') center / 100% 100%;
-		/* Everything below the flap: the V cut out of the photo. */
-		clip-path: polygon(0 26.94%, 50.2% 86.12%, 100% 28.57%, 100% 100%, 0 100%);
-	}
-
 	.flap {
 		position: absolute;
 		inset: 0;
-		z-index: 3;
+		z-index: 4;
 		transform-origin: 50% 0;
 		/* No filter here: a filter flattens 3D, and the back of the flap would never turn around. */
 		transform-style: preserve-3d;
@@ -255,11 +238,9 @@
 
 	.flap-front {
 		background: url('/images/envelope.webp') center / 100% 100%;
-		mask: var(--photo-fade);
-		mask-composite: intersect;
 	}
 
-	/* Seen once the flap has swung past upright: plain felt, darker than the lace side. */
+	/* Seen once the flap has swung past upright: plain cloth, darker than the printed side. */
 	.flap-back {
 		transform: rotateX(180deg);
 		background: linear-gradient(
@@ -270,10 +251,10 @@
 
 	.seal {
 		position: absolute;
-		z-index: 4;
-		top: 56.33%;
-		left: 50.2%;
-		width: 21.8%;
+		z-index: 5;
+		top: 48.2%;
+		left: 50%;
+		width: 41%;
 		aspect-ratio: 1;
 		translate: -50% -50%;
 		border-radius: 50%;
@@ -285,7 +266,7 @@
 		display: block;
 		width: 100%;
 		height: 100%;
-		filter: drop-shadow(0 8px 12px color-mix(in oklab, black 55%, transparent));
+		filter: drop-shadow(0 10px 16px color-mix(in oklab, black 45%, transparent));
 	}
 
 	.seal:hover {
@@ -302,7 +283,7 @@
 		.seal::after {
 			content: '';
 			position: absolute;
-			inset: 6%;
+			inset: 14%;
 			border-radius: 50%;
 			pointer-events: none;
 			animation: breathe 2.4s ease-in-out infinite;
@@ -323,46 +304,9 @@
 		}
 	}
 
-	.wax {
-		position: absolute;
-		display: grid;
-		place-items: center;
-		border-radius: 50%;
-		background: radial-gradient(circle at 42% 36%, #b8454e, #8f1f2c 38%, #6a0f1a 72%, #4f0a13);
-		box-shadow:
-			inset 0 2px 4px color-mix(in oklab, black 45%, transparent),
-			inset 0 -2px 3px color-mix(in oklab, #f0c9a0 25%, transparent);
-	}
-
-	.seal-wax {
-		inset: 21%;
-	}
-
-	/* The same disc on the flap, placed over the photo's own seal: 58% of the seal's 21.8% width. */
-	.flap-wax {
-		top: 56.33%;
-		left: 50.2%;
-		width: 12.64%;
-		aspect-ratio: 1;
-		translate: -50% -50%;
-	}
-
-	/* A thin roman capital, pressed into the wax like a signet. */
-	.monogram {
-		translate: 0 3%;
-		font-family: var(--font-display);
-		font-size: calc(var(--stage-w) * 0.085);
-		font-weight: 300;
-		line-height: 1;
-		background: linear-gradient(160deg, #fbe7b0, var(--c-gold) 45%, #8a6424 80%);
-		background-clip: text;
-		color: transparent;
-		filter: drop-shadow(0 1px 0 color-mix(in oklab, black 55%, transparent));
-	}
-
 	.hint {
 		position: absolute;
-		bottom: max(8svh, calc(50svh - var(--stage-w) / 3 - 5rem));
+		bottom: 6svh;
 		left: 0;
 		right: 0;
 		z-index: 6;
