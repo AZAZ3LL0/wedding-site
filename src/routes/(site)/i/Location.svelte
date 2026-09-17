@@ -41,41 +41,17 @@
 </Section>
 
 <style>
-	/* Burgundy lace laid under the card, as in the printed invitation: only its edge shows. */
+	/* Burgundy lace all round the card, cut from the photo: 560 by 560 with an 88 px band. */
 	.framed {
-		position: relative;
-		isolation: isolate;
-	}
-
-	.framed::before,
-	.framed::after {
-		content: '';
-		position: absolute;
-		left: 50%;
-		z-index: -1;
-		width: calc(100% + 1.5rem);
-		/* The fringe cut out of the photo, 410 by 82, laid across the card's width. */
-		aspect-ratio: 410 / 82;
-		translate: -50% 0;
-		background-color: var(--c-accent);
-		mask-image: url('/images/lace-edge.png');
-		mask-size: 100% 100%;
-		mask-position: center;
-		mask-repeat: no-repeat;
-	}
-
-	.framed::before {
-		bottom: calc(100% - 1.25rem);
-		rotate: 180deg;
-	}
-
-	.framed::after {
-		top: calc(100% - 1.25rem);
+		border: solid transparent;
+		border-width: clamp(1.1rem, 6vw, 1.75rem);
+		border-image-source: url('/images/lace-frame.webp');
+		border-image-slice: 88;
+		border-image-repeat: round;
 	}
 
 	/* Same gate as the arch: the lace waits for the envelope instead of loading with the first screen. */
-	:global(html.js:not(.envelope-opened):not(.envelope-art)) .framed::before,
-	:global(html.js:not(.envelope-opened):not(.envelope-art)) .framed::after {
-		display: none;
+	:global(html.js:not(.envelope-opened):not(.envelope-art)) .framed {
+		border-image-source: none;
 	}
 </style>
