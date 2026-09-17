@@ -39,7 +39,7 @@
 				</ul>
 			{/if}
 
-			<p class="max-w-[30ch] text-xl leading-relaxed text-ink/85 italic">{dressCode.text}</p>
+			<p class="max-w-[32ch] text-lg leading-snug text-ink/85 italic">{dressCode.text}</p>
 		</div>
 	</Reveal>
 </Section>
