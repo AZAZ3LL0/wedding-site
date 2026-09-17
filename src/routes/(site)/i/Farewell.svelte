@@ -10,7 +10,7 @@
 	<Section variant="dark">
 		<Reveal>
 			<div class="flex flex-col items-center gap-6 text-center">
-				<p class="eyebrow text-ivory/80">{eyebrow}</p>
+				<p class="eyebrow text-gold/90">{eyebrow}</p>
 				<div class="relative grid size-40 place-items-center text-gold" aria-hidden="true">
 					<svg viewBox="0 0 160 160" class="absolute inset-0 h-full w-full" fill="none">
 						<circle cx="80" cy="80" r="74" stroke="currentColor" stroke-width="1.4" />
