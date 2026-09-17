@@ -26,8 +26,17 @@
 					<!-- The same thin roman capital as the envelope seal. -->
 					<span class="font-display text-7xl leading-none font-light">{monogram}</span>
 				</div>
-				<p class="font-script text-4xl leading-tight sm:text-5xl">{hosts}</p>
+				<p class="font-script text-4xl leading-tight text-gold sm:text-5xl">{hosts}</p>
 			</div>
 		</Reveal>
 	</Section>
 </footer>
+
+<style>
+	/* The tooled velvet of the envelope, so the footer closes the page on the same material. */
+	footer :global(section) {
+		background-image: url('/images/velvet.jpg');
+		background-position: center;
+		background-size: cover;
+	}
+</style>
