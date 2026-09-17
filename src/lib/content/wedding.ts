@@ -14,7 +14,7 @@ export const content = {
 	},
 	envelope: {
 		eyebrow: 'Приглашение на',
-		title: 'Алина Кыз Узату',
+		title: 'свадьбу!',
 		monogram: 'Т',
 		open: 'Нажмите на печать'
 	},
