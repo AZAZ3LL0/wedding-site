@@ -28,7 +28,7 @@ function without(path: readonly string[]): Mutable {
 const contact = { role: 'Сестра невесты', name: 'Дина', phone: '+7 900 000-00-00', telegram: null };
 
 describe('parseContent', () => {
-	it('accepts wedding.ts with its placeholders', () => {
+	it('accepts wedding.ts', () => {
 		expect(() => parseContent(content)).not.toThrow();
 	});
 

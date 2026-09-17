@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Placeholders are allowed in development; stage 6 fails the build while any remain.
+// Placeholders stay valid for the schema; content.test.ts keeps them out of wedding.ts.
 const TODO = z.literal('TODO');
 
 // Refine instead of trim(): parsing never rewrites the author's strings.
