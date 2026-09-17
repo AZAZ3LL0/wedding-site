@@ -35,12 +35,7 @@
 
 <div inert={covering}>
 	<main tabindex="-1" bind:this={main} class="outline-none">
-		<Cover
-			cover={content.cover}
-			event={content.event}
-			venue={content.venue}
-			hosts={content.hosts}
-		/>
+		<Cover cover={content.cover} event={content.event} months={content.ui.months} />
 		<Invitation event={content.event} labels={content.ui.countdown} />
 		<Location
 			registry={content.registry}
