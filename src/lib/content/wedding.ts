@@ -93,7 +93,7 @@ export const content = {
 	},
 	rsvp: {
 		cta: 'Заполнить анкету гостя',
-		ctaAnswered: 'Посмотреть ответ',
+		ctaAnswered: 'Ваш ответ',
 		eyebrow: 'Ответ на приглашение',
 		title: 'Будете с нами?',
 		deadline: 'Просим ответить до 14 ноября',
