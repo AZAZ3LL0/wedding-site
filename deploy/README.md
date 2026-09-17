@@ -47,6 +47,30 @@ Steps:
 
 GitHub secrets for the `production` environment: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` (output of `ssh-keyscan -t ed25519 <host>`).
 
+## Telegram bot
+
+The app starts with `USE_FAKE_TELEGRAM=true`. To switch to the real bot (task 6.2):
+
+1. In @BotFather: `/newbot`, keep the token.
+2. Find your own chat id, for example with @userinfobot. It receives the organizer notices.
+3. On the server, edit `/srv/wedding/shared/.env` as `deploy`:
+   ```
+   TELEGRAM_BOT_TOKEN=<token from BotFather>
+   TELEGRAM_BOT_USERNAME=<bot username without @>
+   TELEGRAM_WEBHOOK_SECRET=<openssl rand -hex 32>
+   TELEGRAM_ADMIN_CHAT_ID=<your chat id>
+   USE_FAKE_TELEGRAM=false
+   ```
+4. Apply without a new release:
+   ```bash
+   sudo systemctl restart wedding
+   set -a; . /srv/wedding/shared/.env; set +a; bash /srv/wedding/current/telegram-webhook.sh
+   ```
+   Every release reruns `telegram-webhook.sh`, so the webhook follows a rotated secret.
+5. Cloudflare must let Telegram through to `/api/telegram`: Bot Fight Mode or a challenge on that path shows up as `last_error_message` in the script output.
+
+Check on yourself: open the site on a phone, register, answer, press the bot link on `/thanks`, send `/start`. Expect a greeting in the bot, the organizer notice in your chat, and `/kitchen-sink` answering 404.
+
 ## Operations
 
 ```bash
