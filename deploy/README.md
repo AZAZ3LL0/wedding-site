@@ -21,6 +21,7 @@ A merge into `main` runs `.github/workflows/deploy.yml`: build on the runner, rs
   shared/.env               app config, mode 600, owner deploy
   shared/postgres.env       POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, mode 600
   shared/postgres.compose.yml
+  backups/wedding-<utc time>.dump   nightly pg_dump, mode 600, owner root
 ```
 
 ## One-time bootstrap (as root)
@@ -70,6 +71,27 @@ The app starts with `USE_FAKE_TELEGRAM=true`. To switch to the real bot (task 6.
 5. Cloudflare must let Telegram through to `/api/telegram`: Bot Fight Mode or a challenge on that path shows up as `last_error_message` in the script output.
 
 Check on yourself: open the site on a phone, register, answer, press the bot link on `/thanks`, send `/start`. Expect a greeting in the bot, the organizer notice in your chat, and `/kitchen-sink` answering 404.
+
+## Database backups
+
+Cron (`/etc/cron.d/wedding-backup`) dumps the database at 03:30 UTC with `pg_dump --format=custom` inside the postgres container and keeps 14 days. On Sundays at 04:00 `wedding-restore-check` restores the latest dump into a scratch database, compares its tables with the live schema, prints row counts and drops the copy. It fails when the newest dump is older than 36 hours. Both log to `/var/log/wedding-backup.log`.
+
+The dumps live on the same disk as the database, so they cover a bad migration or a wrong delete, not a lost server. Copy one off the host before risky work:
+
+```bash
+scp root@<host>:/srv/wedding/backups/wedding-<time>.dump .
+```
+
+Restore into the live database (as root):
+
+```bash
+wedding-backup                                         # dump the current state first
+systemctl stop wedding
+compose="docker compose -f /srv/wedding/shared/postgres.compose.yml"
+$compose exec -T postgres sh -c 'dropdb -U "$POSTGRES_USER" --force "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
+$compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --exit-on-error' </srv/wedding/backups/wedding-<time>.dump
+systemctl start wedding
+```
 
 ## Operations
 
