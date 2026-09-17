@@ -67,6 +67,12 @@ fi
 step 'postgres 16 on loopback'
 docker compose -f "$root/shared/postgres.compose.yml" up -d --wait
 
+step 'nightly database backup'
+install -m 755 "$here/backup.sh" /usr/local/sbin/wedding-backup
+install -m 755 "$here/restore-check.sh" /usr/local/sbin/wedding-restore-check
+install -d -m 700 "$root/backups"
+install -m 644 "$here/wedding-backup.cron" /etc/cron.d/wedding-backup
+
 step 'caddy on 2096'
 install -d /etc/caddy
 install -m 644 "$here/Caddyfile" /etc/caddy/Caddyfile
