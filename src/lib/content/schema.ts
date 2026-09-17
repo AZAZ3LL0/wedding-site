@@ -221,7 +221,9 @@ export const contentSchema = z.strictObject({
 			seconds: pluralForms
 		}),
 		audio: z.strictObject({ play: text, pause: text }),
-		map: z.strictObject({ open: text })
+		map: z.strictObject({ open: text }),
+		// Local stub pending a tech.md bump: the arch prints the month in words, section 7 has no list.
+		months: z.tuple([text, text, text, text, text, text, text, text, text, text, text, text])
 	}),
 	byAudience: z.strictObject({
 		family: audienceCopy,
