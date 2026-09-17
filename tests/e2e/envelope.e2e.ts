@@ -134,4 +134,13 @@ test.describe('with prefers-reduced-motion', () => {
 		await expect(envelope(page)).toBeHidden();
 		await expect(pageContent(page)).not.toHaveAttribute('inert');
 	});
+
+	test('drops hover transitions too', async ({ page }) => {
+		await page.goto('/i');
+		const link = page.getByRole('link', { name: content.ui.map.open });
+		const duration = await link.evaluate((el) =>
+			parseFloat(getComputedStyle(el).transitionDuration)
+		);
+		expect(duration).toBeLessThan(0.001);
+	});
 });
