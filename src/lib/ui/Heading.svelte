@@ -5,7 +5,12 @@
 
 	let { level, script = false, children }: Props = $props();
 
-	const size = { 1: 'text-5xl sm:text-6xl', 2: 'text-4xl sm:text-5xl', 3: 'text-2xl sm:text-3xl' };
+	// A long script word like «Представьтесь,» outgrows a 320 px screen at 3rem, so level 1 scales down there.
+	const size = {
+		1: 'text-[clamp(2.25rem,11.5vw,3rem)] sm:text-6xl',
+		2: 'text-4xl sm:text-5xl',
+		3: 'text-2xl sm:text-3xl'
+	};
 </script>
 
 <svelte:element
