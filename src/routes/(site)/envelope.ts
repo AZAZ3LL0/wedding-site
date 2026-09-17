@@ -2,6 +2,11 @@
 // before the first paint, so a guest who already opened the envelope never sees it flash.
 export const ENVELOPE_OPENED = 'envelope-opened';
 
+// <html> class set once the closed envelope is on screen. Art that only shows later (the velvet of
+// the arch and its lace) waits for it, so the first screen downloads alone on a slow phone instead
+// of sharing the connection with everything below it.
+export const ENVELOPE_ART = 'envelope-art';
+
 // <html> class set as the envelope starts to fade: the arch rises into place behind it.
 export const ENVELOPE_LEAVING = 'envelope-leaving';
 
