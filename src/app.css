@@ -124,6 +124,18 @@
 	}
 }
 
+/* A net for hover and focus transitions that components declare without a motion guard. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	::before,
+	::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
 /* Small caps line above a heading: «Кыз Узату», «Место». Color comes from the context. */
 @utility eyebrow {
 	font-family: var(--font-display);
