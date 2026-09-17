@@ -45,7 +45,7 @@ export const content = {
 	},
 	timeline: [],
 	dressCode: {
-		text: 'Следовать дресс-коду не обязательно: мы в любом случае будем рады вас видеть',
+		text: 'Следовать дресс-коду не обязательно: мы в любом случае будем рады вас видеть!',
 		// Olive Green, Sage Green, Butter Yellow, Burnt Rose, Rich Mahogany.
 		palette: [
 			{ hex: '#68662c', name: 'оливковый' },
