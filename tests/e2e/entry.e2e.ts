@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { content } from '../../src/lib/content/wedding';
 
-const { entry, byAudience, rsvp } = content;
+const { entry, byAudience, rsvp, thanks } = content;
 
 const entryForm = (page: Page) => page.getByRole('form', { name: entry.title });
 const knownForm = (page: Page) => page.getByRole('form', { name: entry.knownTitle });
@@ -70,9 +70,10 @@ test('a returning guest on another device picks their own card instead of a dupl
 	await enterName(first, name.firstName, name.lastName);
 	await expect(first).toHaveURL('/i');
 	await first.goto('/rsvp');
+	await first.getByLabel(rsvp.nameLabel).fill(`${name.firstName} ${name.lastName}`);
 	await first.getByLabel(rsvp.attendingNo).check();
 	await first.getByRole('button', { name: rsvp.submit }).click();
-	await expect(first).toHaveURL('/thanks');
+	await expect(first.getByRole('heading', { level: 1 })).toHaveText(thanks.titleNo);
 
 	// Another phone, a different case and a typo in the surname.
 	const second = await (await browser.newContext(use)).newPage();
@@ -120,13 +121,11 @@ test('namesakes get hints to tell their cards apart', async ({ page }) => {
 	await expect(page).toHaveURL('/i');
 
 	// The page no longer shows the name, so the card is told apart by the answer left on it.
-	const note = `коллега ${Date.now()}`;
 	await page.goto('/rsvp');
 	const form = page.getByRole('form', { name: rsvp.title });
 	await form.getByLabel(rsvp.attendingNo).check();
-	await form.getByLabel(rsvp.commentLabel).fill(note);
 	await form.getByRole('button', { name: new RegExp(`^(${rsvp.submit}|${rsvp.save})$`) }).click();
-	await expect(page).toHaveURL('/thanks');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText(thanks.titleNo);
 
 	await page.context().clearCookies();
 	await enterName(page, 'Анна', 'Сидорова');
@@ -134,9 +133,10 @@ test('namesakes get hints to tell their cards apart', async ({ page }) => {
 	await knownForm(page).getByRole('button', { name: entry.submit }).click();
 	await expect(page).toHaveURL('/i');
 	await page.goto('/rsvp');
+	// A card of its own: the answer left on the colleague card is not on this one.
 	await expect(
-		page.getByRole('form', { name: rsvp.title }).getByLabel(rsvp.commentLabel)
-	).not.toHaveValue(note);
+		page.getByRole('form', { name: rsvp.title }).getByLabel(rsvp.attendingNo)
+	).not.toBeChecked();
 });
 
 test('refuses a chosen card that the name does not match', async ({ page }) => {
