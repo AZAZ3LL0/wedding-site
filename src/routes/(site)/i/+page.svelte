@@ -44,10 +44,7 @@
 			linkLabel={content.ui.map.open}
 		/>
 		<DressCode dressCode={content.dressCode} labels={content.sections.dressCode} />
-		<Answer
-			answered={data.answered}
-			label={data.answered ? content.rsvp.ctaAnswered : content.rsvp.cta}
-		/>
+		<Answer label={data.answered ? content.rsvp.ctaAnswered : content.rsvp.cta} />
 	</main>
 
 	<Farewell
