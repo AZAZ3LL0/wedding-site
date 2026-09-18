@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { monthName } from '../../src/lib/content/event';
 import { content } from '../../src/lib/content/wedding';
 import { signIn } from './guest';
@@ -41,17 +41,53 @@ test('no player shows while the music is switched off', async ({ page }) => {
 	await expect(page.locator('audio')).toHaveCount(0);
 });
 
-test('sound is off until the guest turns it on', async ({ page }) => {
+test.describe('music', () => {
 	test.skip(!content.music.enabled, 'the track is off');
-	await page.goto('/i');
-	const toggle = page.getByRole('button', { name: content.ui.audio.play });
-	const audio = page.locator('audio');
 
-	await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-	await expect(audio).not.toHaveAttribute('autoplay');
-	await expect(audio).toHaveAttribute('preload', 'none');
-	await page.waitForLoadState('load');
-	expect(await audio.evaluate((el: HTMLAudioElement) => el.paused)).toBe(true);
+	const player = (page: Page) =>
+		page.getByRole('button', {
+			name: new RegExp(`${content.ui.audio.play}|${content.ui.audio.pause}`)
+		});
+	const paused = (page: Page) =>
+		page.locator('audio').evaluate((el: HTMLAudioElement) => el.paused);
+
+	test.beforeEach(async ({ context, baseURL }) => {
+		await signIn(context, baseURL!);
+	});
+
+	test('plays by itself, at the latest when the envelope opens', async ({ page }) => {
+		// The suite skips the envelope by default; this test meets the seal like a guest does.
+		// A phone refuses sound until that tap, and this browser allows it straight away: either
+		// way the music is on once the envelope is open, and nobody had to press the player.
+		await page.addInitScript(() => sessionStorage.removeItem('envelope-opened'));
+		await page.goto('/i');
+		await page.getByRole('button', { name: content.envelope.open }).click();
+
+		await expect(player(page)).toHaveAttribute('aria-pressed', 'true');
+		expect(await paused(page)).toBe(false);
+	});
+
+	test('the button switches it off and it stays off in this tab', async ({ page }) => {
+		await page.addInitScript(() => sessionStorage.setItem('envelope-opened', '1'));
+		await page.goto('/i');
+		await page.locator('[data-card]').click();
+		await expect(player(page)).toHaveAttribute('aria-pressed', 'true');
+
+		await player(page).click();
+		await expect(player(page)).toHaveAttribute('aria-pressed', 'false');
+		expect(await paused(page)).toBe(true);
+
+		// A reload, a tap, and it is still silent: the guest said no.
+		await page.reload();
+		await page.locator('[data-card]').click();
+		await expect(player(page)).toHaveAttribute('aria-pressed', 'false');
+		expect(await paused(page)).toBe(true);
+
+		// Pressing it again brings the music back.
+		await player(page).click();
+		await expect(player(page)).toHaveAttribute('aria-pressed', 'true');
+		expect(await paused(page)).toBe(false);
+	});
 });
 
 test.describe('performance', () => {
