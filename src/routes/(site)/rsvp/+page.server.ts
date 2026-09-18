@@ -1,11 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { getContent } from '$lib/server/content';
 import { getDb } from '$lib/server/db';
+import { findGuestName, renameGuest } from '$lib/server/guests/repo';
 import { getAppQueue } from '$lib/server/queue/boss';
-import { findCompanion, findTelegramUsername } from '$lib/server/rsvp/repo';
+import { findCompanion } from '$lib/server/rsvp/repo';
 import { isRsvpOpen, submitRsvp } from '$lib/server/rsvp/service';
 import type { Actions, PageServerLoad } from './$types';
-import { errorOf, readForm, toPayload, valuesOf, type FormError, type FormValues } from './form';
+import { errorOf, readForm, toSubmission, valuesOf, type FormError, type FormValues } from './form';
 
 // One shape for every failure, so the page reads the error and the typed values without narrowing.
 const failure = (status: number, error: FormError, values: FormValues) =>
@@ -14,21 +15,18 @@ const failure = (status: number, error: FormError, values: FormValues) =>
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.guest) redirect(303, '/');
 	const { rsvp, id, plusOnePolicy } = locals.guest;
-	// After the deadline an answer can only be read, and that is what /thanks shows.
-	const open = isRsvpOpen(getContent().event, new Date());
-	if (!open && rsvp) redirect(303, '/thanks');
 
 	const plusOneAllowed = plusOnePolicy === 'allowed';
 	const db = getDb();
-	const [telegramUsername, companion] = await Promise.all([
-		findTelegramUsername(db, id),
+	const [name, companion] = await Promise.all([
+		findGuestName(db, id),
 		plusOneAllowed ? findCompanion(db, id) : null
 	]);
 	return {
-		open,
+		open: isRsvpOpen(getContent().event, new Date()),
 		answered: rsvp !== null,
 		plusOneAllowed,
-		values: valuesOf(rsvp, telegramUsername, companion)
+		values: valuesOf(name, rsvp, companion)
 	};
 };
 
@@ -37,12 +35,14 @@ export const actions: Actions = {
 		if (!locals.guest) redirect(303, '/');
 
 		const values = readForm(await request.formData());
-		const parsed = toPayload(values);
+		const parsed = toSubmission(values);
 		if (!parsed.ok) return failure(400, parsed.error, values);
 
 		let result: Awaited<ReturnType<typeof submitRsvp>>;
 		try {
-			result = await submitRsvp(getDb(), locals.guest.id, parsed.payload, {
+			// The name first: an answer saved under the old spelling would reach the organizer wrong.
+			await renameGuest(getDb(), locals.guest.id, parsed.submission.name);
+			result = await submitRsvp(getDb(), locals.guest.id, parsed.submission.payload, {
 				content: getContent(),
 				source: 'web'
 			});
@@ -66,6 +66,7 @@ export const actions: Actions = {
 		} catch (error) {
 			console.error(`[rsvp] ${locals.guest.id} notice not queued:`, (error as Error).message);
 		}
-		redirect(303, '/thanks');
+		// The guest goes nowhere: the page thanks them where they are.
+		return { sent: values.attending, values };
 	}
 };

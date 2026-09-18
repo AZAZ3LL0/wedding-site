@@ -1,53 +1,39 @@
+import { splitFullName } from '$lib/server/guests/name-key';
 import type { Companion } from '$lib/server/rsvp/repo';
 import type { RsvpRejection } from '$lib/server/rsvp/service';
 import { rsvpPayloadSchema, type RsvpPayload, type RsvpPublic } from '$lib/types';
 
 // What the form shows and posts back. Kept as typed text, so a failed post re-renders it as is.
 export type FormValues = {
+	name: string;
 	attending: 'yes' | 'no' | null;
-	attendingRegistry: boolean;
-	mainCourses: string[];
-	drinks: string[];
-	allergies: string;
-	needsTransfer: boolean;
-	comment: string;
-	telegramUsername: string;
 	companion: boolean;
-	companionFirstName: string;
-	companionLastName: string;
-	companionCourses: string[];
-	companionDrinks: string[];
+	companionName: string;
 };
 
 // Keys of content.rsvp, so the page looks the message up instead of branching on it.
 export type FormError =
+	| 'nameRequired'
 	| 'attendingRequired'
 	| 'companionNameRequired'
 	| 'companionNotAttending'
-	| 'unknownOption'
 	| 'invalid'
 	| 'failed'
 	| 'closed';
 
+const fullName = (name: { firstName: string; lastName: string }) =>
+	`${name.firstName} ${name.lastName}`.trim();
+
 export function valuesOf(
+	name: { firstName: string; lastName: string } | null,
 	rsvp: RsvpPublic | null,
-	telegramUsername: string | null,
 	companion: Companion | null
 ): FormValues {
 	return {
+		name: name ? fullName(name) : '',
 		attending: rsvp?.attending ?? null,
-		attendingRegistry: rsvp?.attendingRegistry ?? false,
-		mainCourses: rsvp?.mainCourses ?? [],
-		drinks: rsvp?.drinks ?? [],
-		allergies: rsvp?.allergies ?? '',
-		needsTransfer: rsvp?.needsTransfer ?? false,
-		comment: rsvp?.comment ?? '',
-		telegramUsername: telegramUsername ? `@${telegramUsername}` : '',
 		companion: companion !== null,
-		companionFirstName: companion?.firstName ?? '',
-		companionLastName: companion?.lastName ?? '',
-		companionCourses: companion?.mainCourses ?? [],
-		companionDrinks: companion?.drinks ?? []
+		companionName: companion ? fullName(companion) : ''
 	};
 }
 
@@ -56,60 +42,44 @@ export function readForm(data: FormData): FormValues {
 		const value = data.get(name);
 		return typeof value === 'string' ? value : '';
 	};
-	const list = (name: string) =>
-		data.getAll(name).filter((value): value is string => typeof value === 'string');
 	const attending = text('attending');
 
 	return {
+		name: text('name'),
 		attending: attending === 'yes' || attending === 'no' ? attending : null,
 		// A single checkbox is posted only when checked, whatever its value.
-		attendingRegistry: data.has('attendingRegistry'),
-		mainCourses: list('mainCourses'),
-		drinks: list('drinks'),
-		allergies: text('allergies'),
-		needsTransfer: data.has('needsTransfer'),
-		comment: text('comment'),
-		telegramUsername: text('telegramUsername'),
 		companion: data.has('companion'),
-		companionFirstName: text('companionFirstName'),
-		companionLastName: text('companionLastName'),
-		companionCourses: list('companionCourses'),
-		companionDrinks: list('companionDrinks')
+		companionName: text('companionName')
 	};
 }
 
-export function toPayload(
+export type Submission = { payload: RsvpPayload; name: { firstName: string; lastName: string } };
+
+export function toSubmission(
 	values: FormValues
-): { ok: true; payload: RsvpPayload } | { ok: false; error: FormError } {
+): { ok: true; submission: Submission } | { ok: false; error: FormError } {
+	const name = splitFullName(values.name);
+	if (name.firstName === '') return { ok: false, error: 'nameRequired' };
 	if (values.attending === null) return { ok: false, error: 'attendingRequired' };
 
 	// The page hides the companion block once the guest declines, so a checked toggle left
 	// behind is not a request for one.
 	const withCompanion = values.attending === 'yes' && values.companion;
-	const firstName = values.companionFirstName.trim();
-	if (withCompanion && firstName === '') return { ok: false, error: 'companionNameRequired' };
+	const companion = splitFullName(values.companionName);
+	if (withCompanion && companion.firstName === '') {
+		return { ok: false, error: 'companionNameRequired' };
+	}
 
+	// The form asks nothing else, so every other field of the shared payload keeps its default.
 	const parsed = rsvpPayloadSchema.safeParse({
 		attending: values.attending,
-		attendingRegistry: values.attendingRegistry,
-		mainCourses: values.mainCourses,
-		drinks: values.drinks,
-		allergies: values.allergies || null,
-		needsTransfer: values.needsTransfer,
-		comment: values.comment || null,
-		telegramUsername: values.telegramUsername || null,
-		companion: withCompanion
-			? {
-					firstName,
-					lastName: values.companionLastName.trim(),
-					mainCourses: values.companionCourses,
-					drinks: values.companionDrinks
-				}
-			: null
+		companion: withCompanion ? companion : null
 	});
-	return parsed.success ? { ok: true, payload: parsed.data } : { ok: false, error: 'invalid' };
+	return parsed.success
+		? { ok: true, submission: { payload: parsed.data, name } }
+		: { ok: false, error: 'invalid' };
 }
 
 export function errorOf(reason: RsvpRejection): FormError {
-	return reason === 'unknownOption' || reason === 'companionNotAttending' ? reason : 'invalid';
+	return reason === 'companionNotAttending' ? reason : 'invalid';
 }
