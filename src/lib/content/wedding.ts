@@ -93,6 +93,8 @@ export const content = {
 	},
 	rsvp: {
 		cta: 'Заполнить анкету гостя',
+		nameLabel: 'Имя и фамилия',
+		nameRequired: 'Введите имя и фамилию',
 		ctaAnswered: 'Ваш ответ',
 		eyebrow: 'Ответ на приглашение',
 		title: 'Будете с нами?',
