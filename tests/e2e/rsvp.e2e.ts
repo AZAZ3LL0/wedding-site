@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { admin as adminCopy } from '../../src/lib/content/admin';
 import { content } from '../../src/lib/content/wedding';
+import { signInAsAdmin } from './admin';
 import { signIn } from './guest';
 
 const { rsvp, thanks } = content;
@@ -45,11 +47,6 @@ test('the guest gives a name and an answer and is thanked where they are', async
 	await expect(page).toHaveURL('/rsvp');
 	await expect(thanksTitle(page)).toHaveText(thanks.titleYes);
 	await expect(form(page)).toHaveCount(0);
-
-	// The organizer hears about it through rsvp.notify-admin; the fake client keeps the message.
-	await page.goto('/kitchen-sink/telegram');
-	const notice = page.locator('[data-message]').filter({ hasText: GUEST });
-	await expect(notice.first()).toBeVisible({ timeout: 15_000 });
 
 	// Coming back shows the saved answer.
 	await page.goto('/rsvp');
@@ -126,12 +123,14 @@ test.describe('a guest who corrects their name', () => {
 		await submit(page).click();
 		await expect(thanksTitle(page)).toHaveText(thanks.titleYes);
 
-		await page.goto('/kitchen-sink/telegram');
-		const notice = page.locator('[data-message]').filter({ hasText: corrected });
-		await expect(notice.first()).toBeVisible({ timeout: 15_000 });
-
 		// The card is the same one: the corrected name opens it again.
 		await page.goto('/rsvp');
 		await expect(form(page).getByLabel(rsvp.nameLabel)).toHaveValue(corrected);
+
+		// And the organizer sees the corrected name in the panel.
+		await signInAsAdmin(page);
+		await page.getByLabel(adminCopy.filters.search).fill(corrected);
+		await page.getByRole('button', { name: adminCopy.filters.apply }).click();
+		await expect(page.getByRole('table')).toContainText(corrected);
 	});
 });

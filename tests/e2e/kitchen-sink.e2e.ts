@@ -124,9 +124,3 @@ test.describe('reveal', () => {
 		});
 	});
 });
-
-test('telegram page shows the fake inbox', async ({ page }) => {
-	await page.goto('/kitchen-sink/telegram');
-
-	await expect(page.getByRole('heading', { name: sample.telegram.title })).toBeVisible();
-});
