@@ -43,9 +43,6 @@ if ! healthy; then
 	exit 1
 fi
 
-# The release is live either way; a failed webhook fails the job so the bot outage is noticed.
-bash "$release/telegram-webhook.sh"
-
 # Keep a few releases around for manual rollback.
 ls -1dt "$root"/releases/*/ | tail -n +6 | xargs -r rm -rf
 echo "release $sha is live"

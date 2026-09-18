@@ -25,7 +25,6 @@ jobs:
           --health-cmd "pg_isready -U wedding" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgres://wedding:wedding@127.0.0.1:5432/wedding
-      USE_FAKE_TELEGRAM: 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
