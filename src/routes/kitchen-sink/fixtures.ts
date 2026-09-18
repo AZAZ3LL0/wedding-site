@@ -83,9 +83,5 @@ export const sample = {
 			{ id: 'juice', label: 'Сок' }
 		]
 	},
-	toasts: { ok: 'Ответ сохранён', error: 'Не удалось сохранить ответ' },
-	telegram: {
-		title: 'Фейковый Telegram',
-		empty: 'Сообщений пока нет'
-	}
+	toasts: { ok: 'Ответ сохранён', error: 'Не удалось сохранить ответ' }
 };

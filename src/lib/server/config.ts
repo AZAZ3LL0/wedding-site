@@ -3,23 +3,18 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { z } from 'zod';
 
-// The fake client needs some chat id to address; nothing is ever delivered to it.
-const FAKE_ADMIN_CHAT_ID = 1;
-
-const optional = z.string().optional();
-
 const envSchema = z
 	.object({
 		NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 		DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
 		PUBLIC_SITE_URL: z.url().default('http://localhost:5173'),
-		TELEGRAM_BOT_TOKEN: optional,
-		TELEGRAM_BOT_USERNAME: optional,
-		TELEGRAM_WEBHOOK_SECRET: optional,
-		TELEGRAM_ADMIN_CHAT_ID: z.coerce.number().int().optional(),
 		ADMIN_PASSWORD: z.string().min(12).optional(),
 		SESSION_SECRET: z.string().min(32).optional(),
-		USE_FAKE_TELEGRAM: z.enum(['true', 'false']).transform((v) => v === 'true')
+		// The gallery of primitives is a development page; production leaves this unset.
+		SHOW_KITCHEN_SINK: z
+			.enum(['true', 'false'])
+			.default('false')
+			.transform((v) => v === 'true')
 	})
 	.superRefine((env, ctx) => {
 		const require = (key: keyof typeof env, reason: string) => {
@@ -28,16 +23,6 @@ const envSchema = z
 		if (env.NODE_ENV === 'production') {
 			require('ADMIN_PASSWORD', 'required in production');
 			require('SESSION_SECRET', 'required in production');
-		}
-		if (!env.USE_FAKE_TELEGRAM) {
-			for (const key of [
-				'TELEGRAM_BOT_TOKEN',
-				'TELEGRAM_BOT_USERNAME',
-				'TELEGRAM_WEBHOOK_SECRET',
-				'TELEGRAM_ADMIN_CHAT_ID'
-			] as const) {
-				require(key, 'required when USE_FAKE_TELEGRAM=false');
-			}
 		}
 	});
 
@@ -60,13 +45,7 @@ export function parseConfig(raw: Record<string, string | undefined>) {
 		adminPassword: e.ADMIN_PASSWORD ?? null,
 		// A random secret per start outside production: sessions reset on restart, nothing to leak.
 		sessionSecret: e.SESSION_SECRET ?? randomBytes(32).toString('hex'),
-		telegram: {
-			useFake: e.USE_FAKE_TELEGRAM,
-			botToken: e.TELEGRAM_BOT_TOKEN ?? null,
-			botUsername: e.TELEGRAM_BOT_USERNAME ?? null,
-			webhookSecret: e.TELEGRAM_WEBHOOK_SECRET ?? null,
-			adminChatId: e.TELEGRAM_ADMIN_CHAT_ID ?? FAKE_ADMIN_CHAT_ID
-		}
+		showKitchenSink: e.SHOW_KITCHEN_SINK
 	};
 }
 
