@@ -165,6 +165,9 @@ export const contentSchema = z.strictObject({
 	}),
 	rsvp: z.strictObject({
 		cta: text,
+		// Local stub pending a tech.md bump: the form asks for the name, section 7 has no labels for it.
+		nameLabel: text,
+		nameRequired: text,
 		ctaAnswered: text,
 		eyebrow: text,
 		title: text,
