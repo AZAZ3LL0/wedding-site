@@ -38,11 +38,6 @@
 		{/each}
 	</select>
 
-	<label class="flex items-center gap-1">
-		<input type="checkbox" name="invitedToRegistry" checked={row.invitedToRegistry} />
-		{copy.invitedToRegistry}
-	</label>
-
 	<button type="submit" class="min-h-8 rounded border border-slate-300 px-2 hover:bg-slate-50">
 		{copy.save}
 	</button>

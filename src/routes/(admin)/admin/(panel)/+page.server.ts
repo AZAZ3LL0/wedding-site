@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { endAdminSession } from '$lib/server/admin/auth';
 import { deleteGuest, listGuestRows, updateParty } from '$lib/server/admin/repo';
 import { aggregate } from '$lib/server/admin/stats';
-import { getContent } from '$lib/server/content';
 import { getDb } from '$lib/server/db';
 import type { Actions, PageServerLoad } from './$types';
 import { filterRows, readFilters } from './filters';
@@ -11,8 +10,7 @@ import { filterRows, readFilters } from './filters';
 const partySchema = z.object({
 	partyId: z.uuid(),
 	audience: z.enum(['family', 'friends', 'colleagues']),
-	plusOnePolicy: z.enum(['none', 'allowed']),
-	invitedToRegistry: z.stringbool().default(false)
+	plusOnePolicy: z.enum(['none', 'allowed'])
 });
 
 const guestSchema = z.object({ guestId: z.uuid() });
@@ -22,14 +20,12 @@ const failed = () => fail(500, { notice: 'failed' as const });
 export const load: PageServerLoad = async ({ url }) => {
 	const filters = readFilters(url.searchParams);
 	const rows = await listGuestRows(getDb());
-	const { menu } = getContent();
 	return {
 		filters,
-		menu: { courses: menu.courses, drinks: menu.drinks },
 		rows: filterRows(rows, filters),
 		// Counters describe the whole guest list, the way the venue needs them; filters shape the
 		// table only.
-		stats: aggregate(rows, menu)
+		stats: aggregate(rows)
 	};
 };
 

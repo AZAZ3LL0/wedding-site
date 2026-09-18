@@ -12,7 +12,6 @@
 		deleted: admin.party.deleted,
 		failed: admin.party.failed
 	};
-	const menu = $derived([...data.menu.courses, ...data.menu.drinks]);
 </script>
 
 <header
@@ -53,6 +52,6 @@
 		<h2 class="text-lg font-semibold">{admin.nav.guests}</h2>
 		<Filters filters={data.filters} />
 		<p class="text-sm text-slate-600">{admin.filters.found}: {data.rows.length}</p>
-		<GuestTable rows={data.rows} {menu} filters={data.filters} />
+		<GuestTable rows={data.rows} filters={data.filters} />
 	</section>
 </main>

@@ -17,9 +17,6 @@ function row(over: Partial<AdminGuestRow>): AdminGuestRow {
 		partyTitle: 'Приглашение',
 		audience: 'friends',
 		plusOnePolicy: 'none',
-		invitedToRegistry: false,
-		telegramUsername: null,
-		telegramLinked: false,
 		rsvp: null,
 		...over
 	};
@@ -27,12 +24,6 @@ function row(over: Partial<AdminGuestRow>): AdminGuestRow {
 
 const answered = (attending: 'yes' | 'no'): AdminGuestRow['rsvp'] => ({
 	attending,
-	attendingRegistry: false,
-	mainCourses: [],
-	drinks: [],
-	allergies: null,
-	needsTransfer: false,
-	comment: null,
 	updatedAt: '2026-06-01T10:00:00.000Z'
 });
 

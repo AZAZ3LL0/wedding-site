@@ -1,7 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { buildGuestWorkbook, exportFileName } from '$lib/server/admin/export';
 import { listGuestRows } from '$lib/server/admin/repo';
-import { getContent } from '$lib/server/content';
 import { getDb } from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
@@ -10,7 +9,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.admin) error(404);
 
 	const rows = await listGuestRows(getDb());
-	const file = await buildGuestWorkbook(rows, getContent().menu);
+	const file = await buildGuestWorkbook(rows);
 
 	return new Response(new Uint8Array(file), {
 		headers: {
