@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { nameKey } from './name-key';
+import { nameKey, splitFullName } from './name-key';
 
 const letter = fc.constantFrom(...'абвгдеёжзийклмнопрстуфхцчшщъыьэюяabcdefghijklmnopqrstuvwxyz');
 const token = fc.string({ unit: letter, minLength: 1, maxLength: 12 });
@@ -68,6 +68,36 @@ describe('nameKey', () => {
 				expect(key).not.toMatch(/ё/);
 				const parts = key === '' ? [] : key.split(' ');
 				expect(parts).toEqual([...parts].sort());
+			})
+		);
+	});
+});
+
+describe('splitFullName', () => {
+	it('takes the first word as the name and the rest as the surname', () => {
+		expect(splitFullName('  Иван   Петров  ')).toEqual({ firstName: 'Иван', lastName: 'Петров' });
+		expect(splitFullName('Иван')).toEqual({ firstName: 'Иван', lastName: '' });
+		expect(splitFullName('Мария Анна Иванова')).toEqual({
+			firstName: 'Мария',
+			lastName: 'Анна Иванова'
+		});
+	});
+
+	it('keeps the whole name: joining the halves gives the normalized input back', () => {
+		fc.assert(
+			fc.property(fc.string({ maxLength: 40 }), (raw) => {
+				const { firstName, lastName } = splitFullName(raw);
+				const joined = [firstName, lastName].filter(Boolean).join(' ');
+				expect(joined).toBe(raw.trim().replace(/\s+/gu, ' '));
+			})
+		);
+	});
+
+	it('gives the same key as the name it was split from', () => {
+		fc.assert(
+			fc.property(fc.string({ maxLength: 40 }), (raw) => {
+				const { firstName, lastName } = splitFullName(raw);
+				expect(nameKey(`${firstName} ${lastName}`)).toBe(nameKey(raw));
 			})
 		);
 	});
