@@ -3,6 +3,7 @@ import type { Db } from '$lib/server/db';
 import { guestSessions, guests, parties, rsvps } from '$lib/server/db/schema';
 import type { GuestPublic } from '$lib/types';
 import type { MatchCandidate } from './match';
+import { nameKey } from './name-key';
 
 export async function listMatchCandidates(db: Db): Promise<MatchCandidate[]> {
 	return (
@@ -105,4 +106,30 @@ export async function insertPartyWithGuest(
 			.returning({ id: guests.id });
 		return createdGuest!.id;
 	});
+}
+
+export type GuestName = { firstName: string; lastName: string };
+
+export async function findGuestName(db: Db, guestId: string): Promise<GuestName | null> {
+	const [row] = await db
+		.select({ firstName: guests.firstName, lastName: guests.lastName })
+		.from(guests)
+		.where(eq(guests.id, guestId));
+	return row ?? null;
+}
+
+/**
+ * The answer form asks for the name again, so the guest can correct what they typed at the door.
+ * The lookup key follows the new name, otherwise the guest would not find their card next time.
+ */
+export async function renameGuest(db: Db, guestId: string, name: GuestName): Promise<void> {
+	await db
+		.update(guests)
+		.set({
+			firstName: name.firstName,
+			lastName: name.lastName,
+			displayName: name.firstName,
+			nameKey: nameKey(`${name.firstName} ${name.lastName}`)
+		})
+		.where(eq(guests.id, guestId));
 }
