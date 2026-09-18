@@ -64,8 +64,7 @@ export const content = {
 		courses: [],
 		drinks: []
 	},
-	// Off until the track arrives: drop it at static/audio/music.mp3 and switch this on.
-	music: { enabled: false, src: '/audio/music.mp3' },
+	music: { enabled: true, src: '/audio/music.mp3' },
 	sections: {
 		location: {
 			eyebrow: 'Место',
