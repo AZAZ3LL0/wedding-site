@@ -62,15 +62,21 @@ test.describe('interactive primitives', () => {
 		await expect(boxes.nth(2)).toBeEnabled();
 	});
 
-	test('AudioToggle starts muted and toggles its pressed state', async ({ page }) => {
+	test('AudioToggle follows the player and flips on every press', async ({ page }) => {
 		await page.goto('/kitchen-sink');
 		const toggle = page.locator('[data-primitive="AudioToggle"] button');
+		const audio = page.locator('[data-primitive="AudioToggle"] audio');
+		// Whether the track starts by itself is the browser's call, so the test follows the state
+		// it finds: a press stops what plays and starts what does not, and the label follows.
+		const pressed = async () => (await toggle.getAttribute('aria-pressed')) === 'true';
 
-		await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+		const before = await pressed();
+		expect(await audio.evaluate((el: HTMLAudioElement) => el.paused)).toBe(!before);
+
 		await toggle.click();
-		await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+		await expect(toggle).toHaveAttribute('aria-pressed', String(!before));
 		await toggle.click();
-		await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+		await expect(toggle).toHaveAttribute('aria-pressed', String(before));
 	});
 
 	test('Field links its label and error to the control', async ({ page }) => {
