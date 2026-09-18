@@ -13,14 +13,13 @@ const submit = (page: Page) =>
 const toggle = (page: Page) => form(page).getByLabel(rsvp.companionOption);
 const companionName = (page: Page) => form(page).getByLabel(rsvp.companionFirstName);
 
-async function answerWithCompanion(page: Page, firstName: string, lastName: string) {
+async function answerWithCompanion(page: Page, name: string) {
 	await page.goto('/rsvp');
 	await form(page).getByLabel(rsvp.attendingYes).check();
 	await toggle(page).check();
-	await companionName(page).fill(firstName);
-	await form(page).getByLabel(rsvp.companionLastName).fill(lastName);
+	await companionName(page).fill(name);
 	await submit(page).click();
-	await expect(page).toHaveURL('/thanks');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText(thanks.titleYes);
 }
 
 test.describe.configure({ mode: 'serial' });
@@ -51,16 +50,11 @@ test.describe('a couple', () => {
 		await toggle(page).check();
 		await expect(companionName(page)).toBeVisible();
 
-		await answerWithCompanion(page, 'Ольга', 'Смирнова');
-		const companion = page.locator('[data-companion]');
-		await expect(companion).toContainText(thanks.companionTitle);
-		await expect(companion).toContainText('Ольга Смирнова');
+		await answerWithCompanion(page, 'Ольга Смирнова');
 
 		await page.goto('/rsvp');
 		await expect(toggle(page)).toBeChecked();
-		await expect(companionName(page)).toHaveValue('Ольга');
-		await expect(form(page).getByLabel(rsvp.companionLastName)).toHaveValue('Смирнова');
-		await expect(form(page).getByText(rsvp.companionCourses, { exact: true })).toHaveCount(0);
+		await expect(companionName(page)).toHaveValue('Ольга Смирнова');
 	});
 
 	test('the companion name opens the inviter card, not a card of their own', async ({
@@ -73,14 +67,14 @@ test.describe('a couple', () => {
 		// The inviter's own answer shows: the companion is saved on the card they opened.
 		await page.goto('/rsvp');
 		await expect(toggle(page)).toBeChecked();
-		await expect(companionName(page)).toHaveValue('Ольга');
+		await expect(companionName(page)).toHaveValue('Ольга Смирнова');
 	});
 
 	test('sending again updates the one companion', async ({ page }) => {
-		await answerWithCompanion(page, 'Оля', 'Смирнова');
+		await answerWithCompanion(page, 'Оля Смирнова');
 
 		await page.goto('/rsvp');
-		await expect(companionName(page)).toHaveValue('Оля');
+		await expect(companionName(page)).toHaveValue('Оля Смирнова');
 	});
 
 	test('a blank companion name is refused next to the field', async ({ page }) => {
@@ -99,13 +93,11 @@ test.describe('a couple', () => {
 		await form(page).getByLabel(rsvp.attendingNo).check();
 		await expect(toggle(page)).toBeHidden();
 		await submit(page).click();
-		await expect(page).toHaveURL('/thanks');
-		await expect(page.locator('[data-companion]')).toHaveCount(0);
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(thanks.titleNo);
 
 		await page.goto('/rsvp');
 		await form(page).getByLabel(rsvp.attendingYes).check();
 		await expect(toggle(page)).not.toBeChecked();
-		await toggle(page).check();
 		await expect(companionName(page)).toHaveValue('');
 	});
 });

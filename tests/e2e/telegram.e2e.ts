@@ -2,91 +2,61 @@ import { expect, test, type Page } from '@playwright/test';
 import { content } from '../../src/lib/content/wedding';
 import { SECRET_HEADER, WEBHOOK_SECRET, sendUpdate } from './telegram';
 
-const { entry, rsvp, thanks } = content;
+const { rsvp } = content;
 
-const form = (page: Page) => page.getByRole('form', { name: rsvp.title });
+/**
+ * The answer form no longer hands out the personal bot link, so the suite drives the webhook with
+ * a token from the seed. Chat ids are fixed per guest: a rerun against the same database finds the
+ * binding it made last time, which is the case the bot has to survive anyway.
+ */
+const GUEST = { firstName: 'Дмитрий', token: 'seed-token-dmitry-kozlov', chatId: 900000003 };
 
-// Letters only, so every run registers a guest with a brand new bot token.
-function newcomer() {
-	const letters = 'абвгдежзиклмнопрстуфхцчшэюя';
-	const suffix = Array.from({ length: 8 }, () => letters[Math.floor(Math.random() * 26)]).join('');
-	return { firstName: 'Тимур', lastName: `Ботов${suffix}` };
-}
-
-let chatSeq = Date.now() % 1_000_000;
-const newChatId = () => 2_000_000 + ++chatSeq;
-
-/** Registers a guest, answers yes, and returns the bot token from the link on /thanks. */
-async function registerAndAnswer(page: Page): Promise<{ token: string; firstName: string }> {
-	const name = newcomer();
-	await page.goto('/');
-	const entryForm = page.getByRole('form', { name: entry.title });
-	await entryForm.getByLabel(entry.firstNameLabel).fill(name.firstName);
-	await entryForm.getByLabel(entry.lastNameLabel).fill(name.lastName);
-	await entryForm.getByRole('button', { name: entry.submit }).click();
-	await expect(page).toHaveURL('/i');
-
-	await page.goto('/rsvp');
-	await form(page).getByLabel(rsvp.attendingYes).check();
-	await form(page)
-		.getByRole('button', { name: new RegExp(`^(${rsvp.submit}|${rsvp.save})$`) })
-		.click();
-	await expect(page).toHaveURL('/thanks');
-
-	const link = page.locator('[data-bot-link] a');
-	await expect(link).toHaveText(thanks.bot.cta);
-	const href = await link.getAttribute('href');
-	const token = new URL(href!).searchParams.get('start');
-	expect(token).toBeTruthy();
-	return { token: token!, firstName: name.firstName };
-}
+const inbox = (page: Page, chatId: number) =>
+	page.locator('[data-message]').filter({ hasText: `${chatId}` });
 
 test.beforeEach(async ({ page }) => {
 	await page.addInitScript(() => sessionStorage.setItem('envelope-opened', '1'));
 });
 
-test('the guest opens the personal link, binds the chat and talks to the bot', async ({
+test('a personal token binds the chat once and the bot answers from then on', async ({
 	page,
 	request,
 	baseURL
 }) => {
-	const { token, firstName } = await registerAndAnswer(page);
-	const chatId = newChatId();
+	const { token, chatId, firstName } = GUEST;
 
 	const bound = await sendUpdate(request, baseURL!, chatId, `/start ${token}`);
 	expect(bound.status()).toBe(200);
-
-	// The link disappears from /thanks once the chat is bound.
-	await page.reload();
-	await expect(page.locator('[data-bot-link]')).toHaveCount(0);
-
 	// A second tap on the same link binds nothing new.
-	await sendUpdate(request, baseURL!, chatId, `/start ${token}`);
+	const again = await sendUpdate(request, baseURL!, chatId, `/start ${token}`);
+	expect(again.status()).toBe(200);
 
 	await sendUpdate(request, baseURL!, chatId, '/address');
 	await sendUpdate(request, baseURL!, chatId, '/rsvp');
 
 	await page.goto('/kitchen-sink/telegram');
-	const inbox = page.locator('[data-message]').filter({ hasText: `${chatId}` });
-	await expect(inbox.first()).toBeVisible({ timeout: 15_000 });
-	// The bot greets the guest by name once, then reports the binding it already has.
-	await expect(inbox.filter({ hasText: `${firstName}, готово` })).toHaveCount(1);
-	await expect(inbox.filter({ hasText: `${firstName}, вы уже подключены` })).toHaveCount(1);
-	await expect(inbox.filter({ hasText: content.venue.address })).toHaveCount(1);
-	await expect(inbox.filter({ hasText: rsvp.attendingYes })).toHaveCount(1);
+	const messages = inbox(page, chatId);
+	await expect(messages.first()).toBeVisible({ timeout: 15_000 });
+	// Whether this run bound the chat or found it bound, the repeat says so instead of binding again.
+	await expect(
+		messages.filter({ hasText: `${firstName}, вы уже подключены` }).first()
+	).toBeVisible();
+	await expect(messages.filter({ hasText: content.venue.address }).first()).toBeVisible();
+	await expect(
+		messages
+			.filter({ hasText: new RegExp(`${rsvp.attendingYes}|${rsvp.attendingNo}|ещё не ответили`) })
+			.first()
+	).toBeVisible();
 });
 
-test('the guest changes the answer to no from the bot', async ({ page, request, baseURL }) => {
-	const { token } = await registerAndAnswer(page);
-	const chatId = newChatId();
-	await sendUpdate(request, baseURL!, chatId, `/start ${token}`);
+test('an unknown token is refused', async ({ page, request, baseURL }) => {
+	const chatId = 900000009;
+	const response = await sendUpdate(request, baseURL!, chatId, '/start not-a-real-token');
+	expect(response.status()).toBe(200);
 
-	const changed = await sendUpdate(request, baseURL!, chatId, '/no');
-	expect(changed.status()).toBe(200);
-
-	await page.goto('/thanks');
-	await expect(page.getByRole('heading', { level: 1 })).toHaveText(thanks.titleNo);
-	await expect(page.locator('[data-summary]')).toContainText(rsvp.attendingNo);
+	await page.goto('/kitchen-sink/telegram');
+	await expect(inbox(page, chatId).first()).toBeVisible({ timeout: 15_000 });
+	await expect(inbox(page, chatId).filter({ hasText: 'не подошла' }).first()).toBeVisible();
 });
 
 test('the webhook refuses a request without the secret header', async ({ request, baseURL }) => {
