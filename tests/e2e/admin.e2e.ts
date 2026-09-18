@@ -52,7 +52,7 @@ test('shows the counters, the guest table and the filters', async ({ page, conte
 	await signInAsAdmin(page);
 
 	await expect(page.getByText(admin.stats.attending, { exact: true })).toBeVisible();
-	await expect(page.getByText(admin.stats.allergies, { exact: true })).toBeVisible();
+	await expect(page.getByText(admin.stats.noAnswer, { exact: true })).toBeVisible();
 
 	await search(page, guest.lastName);
 	const rows = page.getByRole('table').getByRole('row');

@@ -20,13 +20,7 @@ export const admin = {
 		total: 'Всего гостей',
 		attending: 'Придут',
 		declined: 'Не придут',
-		noAnswer: 'Не ответили',
-		registry: 'Будут в ЗАГСе',
-		transfer: 'Нужен трансфер',
-		courses: 'Горячее',
-		drinks: 'Напитки',
-		allergies: 'Аллергии и ограничения',
-		noAllergies: 'Никто не указал'
+		noAnswer: 'Не ответили'
 	},
 	filters: {
 		title: 'Фильтры',
@@ -45,20 +39,15 @@ export const admin = {
 		audience: 'Группа',
 		status: 'Ответ',
 		companion: 'Спутник',
-		telegram: 'Telegram',
-		menu: 'Меню',
-		notes: 'Аллергии и комментарий',
 		settings: 'Настройки приглашения',
 		empty: 'Гостей по таким фильтрам нет',
 		none: 'нет',
 		plusOne: 'спутник',
 		invitedBy: 'от',
-		telegramLinked: 'бот подключён',
 		updatedAt: 'Изменён'
 	},
 	party: {
 		plusOnePolicy: 'Спутник',
-		invitedToRegistry: 'Зовём в ЗАГС',
 		save: 'Сохранить',
 		delete: 'Удалить гостя',
 		deleteConfirm: 'Удалить гостя вместе с его ответом и спутником?',
@@ -76,14 +65,7 @@ export const admin = {
 			party: 'Приглашение',
 			audience: 'Группа',
 			status: 'Ответ',
-			plusOne: 'Спутник',
-			registry: 'ЗАГС',
-			courses: 'Горячее',
-			drinks: 'Напитки',
-			allergies: 'Аллергии',
-			transfer: 'Трансфер',
-			comment: 'Комментарий',
-			telegram: 'Telegram'
+			plusOne: 'Спутник'
 		},
 		metric: 'Показатель',
 		value: 'Значение',

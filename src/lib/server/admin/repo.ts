@@ -1,11 +1,11 @@
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Db } from '$lib/server/db';
 import { guests, parties, rsvps } from '$lib/server/db/schema';
 import type { AttendStatus, Audience, PlusOnePolicy } from '$lib/types';
 
-// What the organizer sees about one guest. Carries no botToken and no telegramChatId: the panel
-// only needs to know whether the bot is connected (tech.md §11).
+// What the organizer sees about one guest: who they are, which invitation they belong to and
+// whether they come.
 export type AdminGuestRow = {
 	id: string;
 	firstName: string;
@@ -18,20 +18,11 @@ export type AdminGuestRow = {
 	partyTitle: string;
 	audience: Audience;
 	plusOnePolicy: PlusOnePolicy;
-	invitedToRegistry: boolean;
-	telegramUsername: string | null;
-	telegramLinked: boolean;
 	rsvp: AdminRsvp | null;
 };
 
 export type AdminRsvp = {
 	attending: AttendStatus;
-	attendingRegistry: boolean;
-	mainCourses: string[];
-	drinks: string[];
-	allergies: string | null;
-	needsTransfer: boolean;
-	comment: string | null;
 	updatedAt: string;
 };
 
@@ -56,17 +47,7 @@ export async function listGuestRows(db: Db): Promise<AdminGuestRow[]> {
 			partyTitle: parties.title,
 			audience: parties.audience,
 			plusOnePolicy: parties.plusOnePolicy,
-			invitedToRegistry: parties.invitedToRegistry,
-			telegramUsername: guests.telegramUsername,
-			// The chat id itself never leaves the server, only the fact that there is one.
-			telegramLinked: sql<boolean>`(${guests.telegramChatId} is not null)`,
 			attending: rsvps.attending,
-			attendingRegistry: rsvps.attendingRegistry,
-			mainCourses: rsvps.mainCourses,
-			drinks: rsvps.drinks,
-			allergies: rsvps.allergies,
-			needsTransfer: rsvps.needsTransfer,
-			comment: rsvps.comment,
 			updatedAt: rsvps.updatedAt
 		})
 		.from(guests)
@@ -89,54 +70,26 @@ export async function listGuestRows(db: Db): Promise<AdminGuestRow[]> {
 		partyTitle: row.partyTitle,
 		audience: row.audience,
 		plusOnePolicy: row.plusOnePolicy,
-		invitedToRegistry: row.invitedToRegistry,
-		telegramUsername: row.telegramUsername,
-		telegramLinked: row.telegramLinked,
 		rsvp:
 			row.attending === null
 				? null
-				: {
-						attending: row.attending,
-						attendingRegistry: row.attendingRegistry!,
-						mainCourses: row.mainCourses!,
-						drinks: row.drinks!,
-						allergies: row.allergies,
-						needsTransfer: row.needsTransfer!,
-						comment: row.comment,
-						updatedAt: row.updatedAt!.toISOString()
-					}
+				: { attending: row.attending, updatedAt: row.updatedAt!.toISOString() }
 	}));
 }
 
 export type PartyPatch = {
 	audience: Audience;
 	plusOnePolicy: PlusOnePolicy;
-	invitedToRegistry: boolean;
 };
 
-/**
- * Moves a party between groups and changes its policies. Dropping the registry invitation also
- * drops the registry answers of its guests, keeping invariant 4 of tech.md §4 true.
- */
+// Moves a party between groups and says whether it may bring a companion.
 export async function updateParty(db: Db, partyId: string, patch: PartyPatch): Promise<boolean> {
-	return db.transaction(async (tx) => {
-		const updated = await tx
-			.update(parties)
-			.set(patch)
-			.where(eq(parties.id, partyId))
-			.returning({ id: parties.id });
-		if (updated.length === 0) return false;
-
-		if (!patch.invitedToRegistry) {
-			await tx
-				.update(rsvps)
-				.set({ attendingRegistry: false })
-				.where(
-					sql`${rsvps.guestId} in (select ${guests.id} from ${guests} where ${guests.partyId} = ${partyId})`
-				);
-		}
-		return true;
-	});
+	const updated = await db
+		.update(parties)
+		.set(patch)
+		.where(eq(parties.id, partyId))
+		.returning({ id: parties.id });
+	return updated.length > 0;
 }
 
 /**

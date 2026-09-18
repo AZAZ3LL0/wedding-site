@@ -87,17 +87,9 @@ describe('listGuestRows', () => {
 				'partyTitle',
 				'audience',
 				'plusOnePolicy',
-				'invitedToRegistry',
-				'telegramUsername',
-				'telegramLinked',
 				'rsvp'
 			].sort()
 		);
-	});
-
-	it('reports a connected bot without exposing the chat id', async () => {
-		expect((await find(byName('Иван', 'Иванов').id)).telegramLinked).toBe(true);
-		expect((await find(byName('Мария', 'Иванова').id)).telegramLinked).toBe(false);
 	});
 
 	it('links a companion to the guest who brought them', async () => {
@@ -116,28 +108,11 @@ describe('listGuestRows', () => {
 
 	it('carries the answer of a guest who replied', async () => {
 		const { guestId } = await makeGuest();
-		await submitRsvp(
-			db,
-			guestId,
-			answer({
-				mainCourses: ['fish'],
-				drinks: ['wine'],
-				allergies: 'без орехов',
-				needsTransfer: true,
-				telegramUsername: 'kozlov'
-			}),
-			{ content, source: 'web' }
-		);
+		await submitRsvp(db, guestId, answer({}), { content, source: 'web' });
 
 		const row = await find(guestId);
-		expect(row.rsvp).toMatchObject({
-			attending: 'yes',
-			mainCourses: ['fish'],
-			drinks: ['wine'],
-			allergies: 'без орехов',
-			needsTransfer: true
-		});
-		expect(row.telegramUsername).toBe('kozlov');
+		expect(row.rsvp).toMatchObject({ attending: 'yes' });
+		expect(Date.parse(row.rsvp!.updatedAt)).not.toBeNaN();
 	});
 });
 
@@ -146,41 +121,18 @@ describe('updateParty', () => {
 		const { partyId, guestId } = await makeGuest({ audience: 'friends' });
 
 		await expect(
-			updateParty(db, partyId, {
-				audience: 'colleagues',
-				plusOnePolicy: 'none',
-				invitedToRegistry: true
-			})
+			updateParty(db, partyId, { audience: 'colleagues', plusOnePolicy: 'none' })
 		).resolves.toBe(true);
 
 		expect(await find(guestId)).toMatchObject({
 			audience: 'colleagues',
-			plusOnePolicy: 'none',
-			invitedToRegistry: true
+			plusOnePolicy: 'none'
 		});
-	});
-
-	it('clears registry answers when the invitation is withdrawn', async () => {
-		const { partyId, guestId } = await makeGuest({ invitedToRegistry: true });
-		await submitRsvp(db, guestId, answer({ attendingRegistry: true }), { content, source: 'web' });
-		expect((await find(guestId)).rsvp?.attendingRegistry).toBe(true);
-
-		await updateParty(db, partyId, {
-			audience: 'friends',
-			plusOnePolicy: 'allowed',
-			invitedToRegistry: false
-		});
-
-		expect((await find(guestId)).rsvp?.attendingRegistry).toBe(false);
 	});
 
 	it('reports a party that is not there', async () => {
 		await expect(
-			updateParty(db, randomUUID(), {
-				audience: 'family',
-				plusOnePolicy: 'none',
-				invitedToRegistry: false
-			})
+			updateParty(db, randomUUID(), { audience: 'family', plusOnePolicy: 'none' })
 		).resolves.toBe(false);
 	});
 });

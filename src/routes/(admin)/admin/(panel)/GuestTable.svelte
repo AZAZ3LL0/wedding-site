@@ -4,15 +4,7 @@
 	import PartySettings from './PartySettings.svelte';
 	import { actionUrl, type Filters } from './filters';
 
-	let {
-		rows,
-		menu,
-		filters
-	}: {
-		rows: AdminGuestRow[];
-		menu: { id: string; label: string }[];
-		filters: Filters;
-	} = $props();
+	let { rows, filters }: { rows: AdminGuestRow[]; filters: Filters } = $props();
 
 	const copy = admin.table;
 
@@ -26,9 +18,6 @@
 		)
 	);
 
-	const labels = (ids: string[]) =>
-		ids.flatMap((id) => menu.find((option) => option.id === id)?.label ?? []).join(', ');
-
 	const statusOf = (row: AdminGuestRow) => admin.status[row.rsvp?.attending ?? 'none'];
 </script>
 
@@ -36,16 +25,13 @@
 	<p class="rounded border border-slate-200 p-4 text-sm text-slate-600">{copy.empty}</p>
 {:else}
 	<div class="overflow-x-auto">
-		<table class="w-full min-w-3xl border-collapse text-sm">
+		<table class="w-full min-w-2xl border-collapse text-sm">
 			<thead class="bg-slate-50 text-left text-xs text-slate-600">
 				<tr>
 					<th scope="col" class="p-2 font-medium">{copy.name}</th>
 					<th scope="col" class="p-2 font-medium">{copy.status}</th>
 					<th scope="col" class="p-2 font-medium">{copy.audience}</th>
 					<th scope="col" class="p-2 font-medium">{copy.companion}</th>
-					<th scope="col" class="p-2 font-medium">{copy.telegram}</th>
-					<th scope="col" class="p-2 font-medium">{copy.menu}</th>
-					<th scope="col" class="p-2 font-medium">{copy.notes}</th>
 					<th scope="col" class="p-2 font-medium">{copy.settings}</th>
 				</tr>
 			</thead>
@@ -73,37 +59,9 @@
 							>
 								{statusOf(row)}
 							</span>
-							{#if row.rsvp?.attendingRegistry}
-								<span class="block text-xs text-slate-500">{admin.export.columns.registry}</span>
-							{/if}
-							{#if row.rsvp?.needsTransfer}
-								<span class="block text-xs text-slate-500">{admin.export.columns.transfer}</span>
-							{/if}
 						</td>
 						<td class="p-2 whitespace-nowrap">{admin.audience[row.audience]}</td>
 						<td class="p-2">{row.companionName ?? copy.none}</td>
-						<td class="p-2">
-							{row.telegramUsername ? `@${row.telegramUsername}` : copy.none}
-							{#if row.telegramLinked}
-								<span class="block text-xs text-green-800">{copy.telegramLinked}</span>
-							{/if}
-						</td>
-						<td class="p-2">
-							{#if row.rsvp}
-								<span class="block">{labels(row.rsvp.mainCourses) || copy.none}</span>
-								<span class="block text-xs text-slate-500">
-									{labels(row.rsvp.drinks) || copy.none}
-								</span>
-							{:else}
-								{copy.none}
-							{/if}
-						</td>
-						<td class="p-2">
-							{#if row.rsvp?.allergies}<span class="block">{row.rsvp.allergies}</span>{/if}
-							{#if row.rsvp?.comment}
-								<span class="block text-xs text-slate-500">{row.rsvp.comment}</span>
-							{/if}
-						</td>
 						<td class="p-2">
 							{#if firstOfParty.has(row.id)}
 								<PartySettings {row} {filters} />
